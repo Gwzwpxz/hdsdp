@@ -18,3 +18,6 @@ potred/matlab/data
 DSDP/DSDP6/logs
 DSDP/DSDP6/test
 DSDP/DSDP6/matlab/benchmark
+potred/eigs
+*.txt
+*.json
