@@ -1,9 +1,9 @@
 clear; clc; close all;
-m = 30;
+m = 100;
 n = 10000;
 
 A = randn(m, n);
-k = 20;
+k = 64;
 nc = 90;
 
 X = rand(n, k);

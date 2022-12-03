@@ -23,16 +23,18 @@ pobjnew = pobjold;
 for i = 1:100
     
     mu = s' * lbd / nc;
-    VTSLV = V' * diag(lbd ./ s) * V;
+    SLV = diag(lbd ./ s) * V;
+    VTSLV = V' * SLV;
     sinv = s.^-1;
     r = Q * alpha - V' * lbd + e * nu - mu * sigma * V' * sinv + VTSLV * alpha;
-    M = Q + VTSLV;
     
+    M = Q + VTSLV;
     d1 = M \ e;
     d2 = M \ r;
+    
     dnu = -(e' * d2) / (e' * d1);
     dalpha = -d1 * dnu - d2;
-    dlbd = mu * sigma * sinv - ((V * (alpha + dalpha)) ./ s) .* lbd;
+    dlbd = mu * sigma * sinv - SLV * (alpha + dalpha);
     ds = V * dalpha + (V * alpha - s);
     
     % Ratio test
