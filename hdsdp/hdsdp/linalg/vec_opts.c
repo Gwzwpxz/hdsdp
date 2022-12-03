@@ -1,4 +1,6 @@
 #include "vec_opts.h"
+#include "hdsdp_utils.h"
+
 #include <math.h>
 
 /* Blas functions */
@@ -7,6 +9,7 @@ extern void daxpy( int *n, double *a, double *x, int *incx, double *y, int *incy
 extern double ddot( int *n, double *x, int *incx, double *y, int *incy );
 extern void dscal( int *n, double *sa, double *sx, int *incx );
 extern void drscl( int *n, double *sa, double *sx, int *incx );
+extern void dsyr( char *uplo, int *n, double *alpha, double *x, int *incx, double *a, int *lda );
 extern int idamax( int *n, double *x, int *incx );
 extern void dgemv( char *trans, int *m, int *n, double *alpha,
                    double *a, int *lda, double *x, int *incx,
@@ -101,6 +104,13 @@ extern void rscl( int *n, double *sa, double *sx, int *incx ) {
     return;
 }
 
+extern void syr( char *uplo, int *n, double *alpha, double *x, int *incx, double *a, int *lda ) {
+    
+    dsyr(uplo, n, alpha, x, incx, a, lda);
+    
+    return;
+}
+
 extern int idamax( int *n, double *x, int *incx ) {
     
     int idmax = 0;
@@ -144,3 +154,15 @@ extern void vvrscl( int *n, double *s, double *x ) {
     return;
 }
 
+extern double nrm1( int *n, double *x, int *incx ) {
+
+    assert( *incx == 1 );
+    
+    double nrm = 0.0;
+    
+    for ( int i = 0; i < *n; ++i ) {
+        nrm += fabs(x[i]);
+    }
+    
+    return nrm;
+}
