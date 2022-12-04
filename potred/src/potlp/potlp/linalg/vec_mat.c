@@ -14,9 +14,16 @@ extern double ddot( int *n, double *x, int *incx, double *y, int *incy );
 extern void dscal( int *n, double *sa, double *sx, int *incx );
 extern void drscl( int *n, double *sa, double *sx, int *incx );
 extern int idamax( int *n, double *x, int *incx );
-extern void dgemv( char *trans, pot_int *m, pot_int *n, double *alpha,
-                   double *a, pot_int *lda, double *x, pot_int *incx,
-                   double *beta, double *y, pot_int *incy );
+extern void dgemv( char *trans, int *m, int *n, double *alpha,
+                   double *a, int *lda, double *x, int *incx,
+                   double *beta, double *y, int *incy );
+extern void dsyrk( char *uplo, char *trans, int *n, int *k, double *alpha,
+                   double *a, int *lda, double *beta, double *c, int *ldc );
+extern void dsymv( char *uplo, int *n, double *alpha, double *a, int *lda,
+                  double *x, int *incx, double *beta, double *y, int *incy );
+extern void dpotrf( char *uplo, int *n, double *a, int *lda, int *info );
+extern void dpotrs( char *uplo, int *n, int *nrhs, double *a, int *lda,
+                    double *b, int *ldb, int *info );
 
 extern double nrm2( pot_int *n, double *x, pot_int *incx ) {
 #ifdef MYBLAS
@@ -173,6 +180,52 @@ extern void gemv( char *trans, pot_int *m, pot_int *n, double *alpha,
     dgemv(trans, m, n, alpha, a, lda, x, incx, beta, y, incy);
     
     return;
+}
+
+extern void symv( char *uplo, pot_int *n, double *alpha, double *a, pot_int *lda,
+                  double *x, pot_int *incx, double *beta, double *y, pot_int *incy ) {
+    
+    dsymv(uplo, n, alpha, a, lda, x, incx, beta, y, incy);
+    
+    return;
+}
+
+extern void syrk( char *uplo, char *trans, pot_int *n, pot_int *k, double *alpha,
+                  double *a, pot_int *lda, double *beta, double *c, pot_int *ldc ) {
+    
+    dsyrk(uplo, trans, n, k, alpha, a, lda, beta, c, ldc);
+    
+    return;
+}
+
+extern void potrf( char *uplo, pot_int *n, double *a, pot_int *lda, pot_int *info ) {
+    
+    dpotrf(uplo, n, a, lda, info);
+    
+    return;
+}
+
+extern void potrs( char *uplo, pot_int *n, pot_int *nrhs, double *a, pot_int *lda,
+                   double *b, pot_int *ldb, pot_int *info ) {
+    
+    dpotrs(uplo, n, nrhs, a, lda, b, ldb, info);
+    
+    return;
+}
+
+extern double quadform( pot_int *n, double *Q, double *x ) {
+    /* Compute 0.5 * x' * Q * x*/
+    int nCol = *n;
+    double quadVal = 0.0, xi, tmp;
+    for ( int i = 0, j; i < nCol; ++i ) {
+        xi = x[i]; tmp = 0.5 * Q[nCol * i + i] * xi;
+        for ( j = i + 1; j < nCol; ++j ) {
+            tmp += Q[nCol * i + j] * x[j];
+        }
+        quadVal += tmp * xi;
+    }
+    
+    return quadVal;
 }
 
 extern double sumlogdet( pot_int *n, double *x ) {
@@ -591,7 +644,7 @@ extern int spMatPCScal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, d
         spMatColScal(nCol, Ap, Ai, Ax, pcWorkDiagCol);
     }
     
-    RUIZ_DEBUG("PC-scaling Ends %s\n", "");
+    PC_DEBUG("PC-scaling Ends \n");
     
 exit_cleanup:
     

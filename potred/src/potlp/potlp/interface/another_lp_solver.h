@@ -11,6 +11,7 @@
 #define another_lp_solver_h
 
 #include "pot_structs.h"
+#include "qp_avg.h"
 #include "lp_qmatrix.h"
 #include "lp_newton.h"
 
@@ -85,8 +86,16 @@ typedef struct {
     pot_constr_mat *potConstrMat;
     pot_fx *potObjF;
     
-    /* Interior point solver */
-    lp_newton *ipm;
+    /* Interior point solvers */
+    lp_newton    *ipm;
+    pot_qpsolver *qp;
+    
+    /* QP Restart */
+    int nRounds;
+    int nHistoryIts;
+    int nItsInRound;
+    double *xHistory;
+    double *resiHistory;
     
     int intParams[NUM_INT_PARAM];
     double dblParams[NUM_DBL_PARAM];

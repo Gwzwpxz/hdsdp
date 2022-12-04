@@ -86,6 +86,7 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
     int curvature = 1;
     int curvInterval = 500;
     int rscalFreq = -1;
+    int qpWindow = 32;
     int verbose = 1;
     
     double relFeasTol = 1e-04;
@@ -119,6 +120,9 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
         
         param = mxGetField(params, 0, "RScalFreq");
         if ( param ) { rscalFreq = (int) (*mxGetPr(param)); }
+        
+        param = mxGetField(params, 0, "QPWindow");
+        if ( param ) { qpWindow = (int) (*mxGetPr(param)); }
         
         param = mxGetField(params, 0, "verbose");
         if ( param ) { verbose = (int) (*mxGetPr(param)); }
@@ -200,6 +204,7 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
     potlp->intParams[INT_PARAM_CURVATURE] = curvature;
     potlp->intParams[INT_PARAM_CURVINTERVAL] = curvInterval;
     potlp->intParams[INT_PARAM_RSCALFREQ] = rscalFreq;
+    potlp->intParams[INT_PARAM_QPWINDOW] = qpWindow;
     
     potlp->dblParams[DBL_PARAM_RELFEASTOL] = relFeasTol;
     potlp->dblParams[DBL_PARAM_RELOPTTOL] = relOptTol;

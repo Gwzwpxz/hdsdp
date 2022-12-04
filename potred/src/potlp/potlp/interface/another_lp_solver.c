@@ -418,6 +418,26 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
 #endif
     }
     
+    /* Export history */
+    potVecExport(potlp->potIterator->xVec, potlp->xHistory + potlp->nItsInRound * potlp->potIterator->n);
+    POTLP_MEMCPY(potlp->resiHistory, potlp->pdcRes, double, potlp->nRow + potlp->nCol + 1);
+    potlp->nItsInRound += 1;
+    
+    /* Now we can restart */
+    if ( potlp->nItsInRound == potlp->nHistoryIts - 1 ) {
+        potlp->nItsInRound = 0;
+        potlp->nRounds += 1;
+        potQPLoadProb(potlp->qp, potlp->resiHistory, potlp->potObjF->n,
+                      potlp->nRow + potlp->nCol + 1, 2 * potlp->nCol + 2, potlp->xHistory);
+        int code = potQPSolveProb(potlp->qp, potlp->potIterator->fVal * 0.6, potlp->potIterator->xVec->x);
+        if ( code != RETCODE_OK ) {
+            potlp->Lpstatus = POTLP_NUMERICAL;
+            intInfo = (int *) info;
+            *intInfo = 1;
+        }
+        potReductionRestart(potlp->potIterator);
+    }
+    
     int resiFreq = 500;
     if ( potlp->intParams[INT_PARAM_RSCALFREQ] > 0 ) {
         resiFreq = potlp->intParams[INT_PARAM_RSCALFREQ];
@@ -463,14 +483,15 @@ static void POT_FNAME(LPSolverIObjScale)( potlp_solver *potlp ) {
     potlp->rhsScaler = 1.0;
     
     if ( potlp->intParams[INT_PARAM_COEFSCALE] ) {
-        
-//        int iMaxAbsb = idamax(&potlp->nRow, lpRHS, &potIntConstantOne);
-//        int iMaxAbsc = idamax(&potlp->nCol, lpObj, &potIntConstantOne);
-//        double maxAbsb = fabs(lpRHS[iMaxAbsb]);
-//        double maxAbsc = fabs(lpObj[iMaxAbsc]);
-//
-//        potlp->objScaler = maxAbsc + 1.0;
-//        potlp->rhsScaler = maxAbsb + 1.0;
+#if 0
+        int iMaxAbsb = idamax(&potlp->nRow, lpRHS, &potIntConstantOne);
+        int iMaxAbsc = idamax(&potlp->nCol, lpObj, &potIntConstantOne);
+        double maxAbsb = fabs(lpRHS[iMaxAbsb]);
+        double maxAbsc = fabs(lpObj[iMaxAbsc]);
+
+        potlp->objScaler = maxAbsc + 1.0;
+        potlp->rhsScaler = maxAbsb + 1.0;
+#endif
         
         potlp->objScaler = objOneNorm + 1.0;
         potlp->rhsScaler = rhsOneNorm + 1.0;
@@ -788,6 +809,7 @@ extern pot_int POT_FNAME(LPSolverCreate)( potlp_solver **ppotlp ) {
     POT_CALL(potConstrMatCreate(&potlp->potConstrMat));
     POT_CALL(potObjFCreate(&potlp->potObjF));
     POT_CALL(LpNewtonCreate(&potlp->ipm));
+    POT_CALL(potQPCreate(&potlp->qp));
     
     potlp->nIter = 0;
     potlp->startT = potUtilGetTimeStamp();
@@ -894,6 +916,24 @@ extern pot_int POT_FNAME(LPSolverSetData)( potlp_solver *potlp, pot_int *Ap, pot
     /* Prepare the interior point solver */
     POT_CALL(LpNewtonInit(potlp->ipm, nCol, nRow, Ap, Ai, Ax));
     
+    /* Prepare the QP solver */
+    int qpWindow = POTLP_MIN(potlp->intParams[INT_PARAM_QPWINDOW], nRow);
+    
+    /* Find a smaller power of 2 */
+    qpWindow -= 1;
+    qpWindow |= qpWindow >> 1;
+    qpWindow |= qpWindow >> 2;
+    qpWindow |= qpWindow >> 4;
+    qpWindow |= qpWindow >> 8;
+    qpWindow |= qpWindow >> 16;
+    qpWindow += 1;
+    qpWindow = qpWindow / 2;
+    
+    potlp->nHistoryIts = qpWindow;
+    POT_CALL(potQPInit(potlp->qp, qpWindow, 2 * nCol + 2));
+    POTLP_INIT(potlp->xHistory, double, qpWindow * (2 * nCol + 2 * nRow + 2));
+    POTLP_INIT(potlp->resiHistory, double, qpWindow * (2 * nCol + 2 * nRow + 2));
+    
 exit_cleanup:
     return retcode;
 }
@@ -964,6 +1004,10 @@ extern void POT_FNAME(LPSolverClear)( potlp_solver *potlp ) {
     potObjFDestroy(&potlp->potObjF);
     potLPDestroy(&potlp->potIterator);
     LpNewtonDestroy(&potlp->ipm);
+    potQPDestroy(&potlp->qp);
+    
+    POTLP_FREE(potlp->xHistory);
+    POTLP_FREE(potlp->resiHistory);
     
     POTLP_ZERO(potlp, potlp_solver, 1);
     

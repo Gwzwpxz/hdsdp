@@ -39,6 +39,8 @@ extern void potUtilGetDefaultParams( double dblParams[NUM_DBL_PARAM], int intPar
     intParams[INT_PARAM_RSCALFREQ] = -1;
     /* Whether to scale simplex to start from all-one */
     intParams[INT_PARAM_SCALSIMPLEX] = 1;
+    /* Maximum windows size of averaging heuristic */
+    intParams[INT_PARAM_QPWINDOW] = 32;
     
     /* Internal parameters */
     dblParams[DBL_IPARAM_RESTARTRATE] = 20.0;
@@ -58,6 +60,7 @@ extern void potUtilPrintParams( double dblParams[NUM_DBL_PARAM], int intParams[N
     printf("CInterVal   is set to %d \n", intParams[INT_PARAM_CURVINTERVAL]);
     printf("RScalFreq   is set to %d \n", intParams[INT_PARAM_RSCALFREQ]);
     printf("ScalSpx     is set to %d \n", intParams[INT_PARAM_SCALSIMPLEX]);
+    printf("QPWindow    is set to %d \n", intParams[INT_PARAM_QPWINDOW]);
     printf("RelFeasTol  is set to %3.3e \n", dblParams[DBL_PARAM_RELFEASTOL]);
     printf("RelOptTol   is set to %3.3e \n", dblParams[DBL_PARAM_RELOPTTOL]);
     printf("TimeLimit   is set to %.0fs \n", dblParams[DBL_PARAM_TIMELIMIT]);
