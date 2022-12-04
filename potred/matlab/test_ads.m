@@ -1,12 +1,12 @@
 clear; clc; close all;
-m = 100;
+m = 1000;
 n = 10000;
 
-A = randn(m, n);
+A = rand(m, n);
 k = 64;
 nc = 90;
 
-X = rand(n, k);
+X = randn(n, k);
 AX = A * X;
 alpha = adsqp(AX, X(n - nc + 1:end, :));
 
