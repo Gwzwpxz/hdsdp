@@ -744,13 +744,17 @@ extern void potLPClear( pot_solver *pot ) {
     potVecDestroy(&pot->xVecOld);
     potVecDestroy(&pot->xVecNorm);
     potVecDestroy(&pot->gVec);
+    potVecDestroy(&pot->gkVec);
     potVecDestroy(&pot->mkVec);
     potVecDestroy(&pot->xStepVec);
     potVecDestroy(&pot->auxVec1);
     potVecDestroy(&pot->auxVec2);
     potLanczosDestroy(&pot->lczTool);
     
-    POTLP_FREE(pot->HessMat);
+    if ( pot->HessMat ) {
+        POTLP_FREE(pot->HessMat);
+    }
+    
     POTLP_ZERO(pot, pot_solver, 1);
     
     return;

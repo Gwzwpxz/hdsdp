@@ -1039,12 +1039,16 @@ extern void POT_FNAME(LPSolverClear)( potlp_solver *potlp ) {
     POTLP_FREE(potlp->rowDual);
     
     POTLP_FREE(potlp->scalVals);
-    POTLP_FREE(potlp->isColBasic);
+    
+    if ( potlp->isColBasic ) {
+        POTLP_FREE(potlp->isColBasic);
+    }
     
     potConstrMatDestroy(&potlp->potConstrMat);
     potObjFDestroy(&potlp->potObjF);
     potLPDestroy(&potlp->potIterator);
     LpNewtonDestroy(&potlp->ipm);
+    LPQMatDestroy(&potlp->potQMatrix);
     potQPDestroy(&potlp->qp);
     
     POTLP_FREE(potlp->xHistory);
