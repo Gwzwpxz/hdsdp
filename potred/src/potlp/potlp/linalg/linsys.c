@@ -31,7 +31,8 @@ typedef struct {
     
 } pds_linsys;
 
-#if 0
+
+#ifdef QDLDL
 static int ldlCreate( void **pldl, int n ) {
     
     int retcode = RETCODE_OK;
@@ -148,8 +149,7 @@ static void ldlDestroy( void **pldl ) {
     
     return;
 }
-#endif
-
+#else
 static int pdsCreate( void **pldl, int n ) {
     
     int retcode = RETCODE_OK;
@@ -334,6 +334,7 @@ static void pdsDestroy( void **pldl ) {
 
     return;
 }
+#endif
 
 extern pot_int potLinsysCreate( pot_linsys **ppotLinsys ) {
     
@@ -355,12 +356,22 @@ extern pot_int potLinsysCreate( pot_linsys **ppotLinsys ) {
     POTLP_ZERO(potLinsys, pot_linsys, 1);
     
     potLinsys->backUpLin = 0;
+    
+#ifdef QDLDL
+    potLinsys->LCreate = ldlCreate;
+    potLinsys->LDestroy = ldlDestroy;
+    potLinsys->LSFac = ldlSymbolic;
+    potLinsys->LNFac = ldlNumeric;
+    potLinsys->LNFacBackup = ldlNumeric;
+    potLinsys->LSolve = ldlSolve;
+#else
     potLinsys->LCreate = pdsCreate;
     potLinsys->LDestroy = pdsDestroy;
     potLinsys->LSFac = pdsSymbolic;
     potLinsys->LNFac = pdsNumeric;
     potLinsys->LNFacBackup = pdsScalNumeric;
     potLinsys->LSolve = pdsSolve;
+#endif
     
     *ppotLinsys = potLinsys;
     
