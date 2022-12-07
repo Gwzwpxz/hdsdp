@@ -137,6 +137,9 @@ typedef struct {
     
     double  curvTime;
     
+    void  *cbInfo;
+    void (*cbPotFunc) (void *); ///< Callback function to extract information
+    
 } pot_solver;
 
 #endif /* pot_structs_h */

@@ -36,11 +36,13 @@ extern void potUtilGetDefaultParams( double dblParams[NUM_DBL_PARAM], int intPar
     /* Number of curvature usage */
     intParams[INT_PARAM_CURVATURE] = 20;
     /* Frequency of switching the weight of the residuals */
-    intParams[INT_PARAM_RSCALFREQ] = -1;
+    intParams[INT_PARAM_RSCALFREQ] = 5;
     /* Whether to scale simplex to start from all-one */
     intParams[INT_PARAM_SCALSIMPLEX] = 1;
     /* Maximum windows size of averaging heuristic */
     intParams[INT_PARAM_QPWINDOW] = 32;
+    /* Number of iterations to do a recording */
+    intParams[INT_PARAM_RECORDFREQ] = 10;
     
     /* Internal parameters */
     dblParams[DBL_IPARAM_RESTARTRATE] = 20.0;
@@ -61,6 +63,7 @@ extern void potUtilPrintParams( double dblParams[NUM_DBL_PARAM], int intParams[N
     printf("RScalFreq   is set to %d \n", intParams[INT_PARAM_RSCALFREQ]);
     printf("ScalSpx     is set to %d \n", intParams[INT_PARAM_SCALSIMPLEX]);
     printf("QPWindow    is set to %d \n", intParams[INT_PARAM_QPWINDOW]);
+    printf("RecordFreq  is set to %d \n", intParams[INT_PARAM_RECORDFREQ]);
     printf("RelFeasTol  is set to %3.3e \n", dblParams[DBL_PARAM_RELFEASTOL]);
     printf("RelOptTol   is set to %3.3e \n", dblParams[DBL_PARAM_RELOPTTOL]);
     printf("TimeLimit   is set to %.0fs \n", dblParams[DBL_PARAM_TIMELIMIT]);
@@ -88,12 +91,52 @@ extern void potUtilPrintDblContent( int n, double *d ) {
     return;
 }
 
+extern void potUtilDumpDblMatrix( int m, int n, double *d ) {
+    
+    for ( int i = 0, j; i < m; ++i ) {
+        for ( j = 0; j < n; ++j ) {
+            printf("%+10.6e, ", d[m * j + i]);
+        }
+        printf("\n");
+    }
+    
+    return;
+}
+
+extern void potUtilDumpSymMatrix( int m, int n, double *d ) {
+    
+    for ( int i = 0, j; i < m; ++i ) {
+        for ( j = 0; j < n; ++j ) {
+            if ( i > j ) {
+                printf("%+10.6e, ", d[m * j + i]);
+            } else {
+                printf("%+10.6e, ", d[m * i + j]);
+            }
+        }
+        printf("\n");
+    }
+    
+    return;
+}
+
 extern void potUtilPrintIntContent( int n, int *d ) {
     
     for ( int i = 0; i < n; ++i ) {
         printf("%5d, ", d[i]);
     }
     printf("\n");
+    return;
+}
+
+extern void potUtilPrintDblMin( int n, double *d ) {
+    
+    double dMin = POTLP_INFINITY;
+    
+    for ( int i = 0; i < n; ++i ) {
+        dMin = POTLP_MIN(d[i], dMin);
+    }
+    
+    printf("Min = %10.6e \n", dMin);
     return;
 }
 

@@ -93,7 +93,9 @@ typedef struct {
     /* QP Restart */
     int nRounds;
     int nHistoryIts;
+    int nRecordFreq;
     int nItsInRound;
+    double *resiBuffer;
     double *xHistory;
     double *resiHistory;
     

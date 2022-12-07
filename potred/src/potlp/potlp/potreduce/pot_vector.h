@@ -26,6 +26,7 @@ extern void potVecConeRScal( pot_vec *pVecX, pot_vec *pVecY );
 extern void potVecSimplexProj( pot_vec *pVecX );
 extern double potVecConeMin( pot_vec *pVecX );
 extern double potVecConeMax( pot_vec *pVecX );
+extern void potVecConeMaximum( pot_vec *pVecX, double xMin );
 extern double potVecLogDet( pot_vec *pVecX );
 extern double potVecSumCone( pot_vec *pVecX );
 extern double potVecSumScalCone( pot_vec *pVecX, pot_vec *pVecY );

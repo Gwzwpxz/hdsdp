@@ -48,6 +48,7 @@ static int ldlCreate( void **pldl, int n ) {
     *pldl = qdldl;
 
 exit_cleanup:
+    
     return retcode;
 }
 

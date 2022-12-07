@@ -210,6 +210,12 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
     
     /* [f, g] = fpot(A, ATA, x_pres); */
     pot->fVal = potObjFVal(objFunc, xPres);
+    
+    /* Callback before gradient computation destroys data */
+    if ( pot->cbPotFunc ) {
+        pot->cbPotFunc(pot->cbInfo);
+    }
+    
     potObjFGrad(objFunc, xPres, gVec);
     
     double fVal = pot->fVal;
@@ -300,13 +306,14 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
     while (1) {
         
         double modelVal = potReductionTrustRegionSolve(alphaStep, pot->projHessMat, pot->projgVec,
-                                                       pot->projGMat, pot->betaRadius * pot->betaRadius / 3.0,
+                                                       pot->projGMat, pot->betaRadius * pot->betaRadius / 2.5,
                                                        1e-10);
         
         // POTLP_DEBUG("beta = %e | a[0] = %e | a[1] = %e \n", pot->betaRadius, alphaStep[0], alphaStep[1]);
         
         if ( modelVal > 0.0 || pot->betaRadius < 1e-05 ) {
             retcode = RETCODE_FAILED;
+            error_traceback("Invalid model of potential function");
             goto exit_cleanup;
         }
         
@@ -319,9 +326,9 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
         double potValTmp = potReductionComputePotValue(rhoVal, fValTmp, zVal, auxVec1);
         double potLineVal = POTLP_INFINITY;
         
-        if ( pot->curvInterval < 50 || (1) ) {
+        if ( pot->curvInterval < 10 && (1) ) {
             potLineVal = potReductionPotLineSearch(objFunc, rhoVal, zVal, xPres,
-                                                   dXStep, auxVec2, potValTmp, 1e-12);
+                                                   dXStep, auxVec2, potValTmp, 0.0);
         }
         
         potVecCopy(xPres, xPrev);
@@ -341,7 +348,7 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
             // printf("\n");
         } else if ( potReduceRatio > 0.75 ) {
             pot->betaRadius *= 2.0;
-            pot->betaRadius = POTLP_MIN(pot->betaRadius, 0.995);
+            pot->betaRadius = POTLP_MIN(pot->betaRadius, 1.0);
             pot->potVal = potValTmp;
             break;
         } else {
@@ -351,21 +358,9 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
         }
     }
     
-    /* Restart from center of simplex */
-    if ( fabs(alphaStep[0]) + fabs(alphaStep[1]) < 1e-05 ) {
-        /* Scale previous x */
-        potVecConeRScal(xPres, xPrev);
-        /* Reset objective */
-        potObjFScal(objFunc, xPres);
-        /* Reset initial point*/
-        potConstrMatPrepareX(AMat, xPres);
-        /* Reset potential solver */
-        potReductionRestart(pot);
-    }
-    
     double potReduceEps = -1e-03; // * pot->n;
     
-    if ( (potReduce > potReduceEps && pot->useCurvature) || lczCode != RETCODE_OK ) {
+    if ( (potReduce > 0.01 * potReduceEps && pot->useCurvature) || lczCode != RETCODE_OK ) {
         pot->allowCurvature = 0;
         if ( lczCode != RETCODE_OK ) {
             printf("Curvature is shut down due to failed Lanczos \n");
@@ -571,11 +566,7 @@ extern pot_int potLPInit( pot_solver *pot, pot_int vDim, pot_int vConeDim ) {
     
     pot_int retcode = RETCODE_OK;
     
-    if ( pot->potVal != POTLP_INFINITY || pot->xVec || pot->xVecOld ||
-         pot->gVec || pot->mkVec || pot->xStepVec || pot->HessMat ||
-         pot->auxVec1 || pot->auxVec2 ) {
-        goto exit_cleanup;
-    }
+    pot->n = vDim;
 
     POT_CALL(potVecCreate(&pot->xVec));
     POT_CALL(potVecInit(pot->xVec, vDim, vConeDim));
@@ -651,12 +642,20 @@ exit_cleanup:
     return retcode;
 }
 
+extern void potLPSetCallback( pot_solver *pot, void *cbInfo, void (*cbPotFunc) (void *)) {
+    
+    pot->cbInfo = cbInfo;
+    pot->cbPotFunc = cbPotFunc;
+    
+    return;
+}
+
 extern pot_int potReductionSolve( pot_solver *pot ) {
     
     pot_int retcode = RETCODE_OK;
     
     /* Reset information */
-    pot->betaRadius = 0.995;
+    pot->betaRadius = 1.0;
     
     potVecReset(pot->xVec);
     potVecReset(pot->xVecOld);
@@ -702,7 +701,21 @@ extern pot_int potReductionSolve( pot_solver *pot ) {
 extern void potReductionRestart( pot_solver *pot ) {
     
     /* Restart the potential reduction solver */
-    pot->betaRadius = 0.995;
+    /* Scale previous x */
+    
+    potVecConeMaximum(pot->xVec, 1e-10);
+//    double xMinVal = potVecConeMin(pot->xVec);
+//    if ( xMinVal <= 0.0 ) {
+//        assert( xMinVal > 0.0 );
+//    }
+    
+    potVecConeRScal(pot->xVec, pot->xVecOld);
+    /* Reset objective */
+    potObjFScal(pot->objFunc, pot->xVec);
+    /* Reset initial point*/
+    potConstrMatPrepareX(pot->AMat, pot->xVec);
+    pot->betaRadius = 1.0;
+    pot->fVal = POTLP_INFINITY;
     pot->potVal = POTLP_INFINITY;
     
     return;

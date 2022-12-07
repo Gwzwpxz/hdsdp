@@ -244,6 +244,15 @@ extern double potVecConeMax( pot_vec *pVecX ) {
     return pVecX->x[ishift + idmin];
 }
 
+extern void potVecConeMaximum( pot_vec *pVecX, double xMin ) {
+    
+    for ( int i = pVecX->n - pVecX->ncone; i < pVecX->n; ++i ) {
+        pVecX->x[i] = POTLP_MAX(pVecX->x[i], xMin);
+    }
+    
+    return;
+}
+
 extern double potVecLogDet( pot_vec *pVecX ) {
     
     return sumlogdet(&pVecX->ncone, pVecX->x + pVecX->n - pVecX->ncone);

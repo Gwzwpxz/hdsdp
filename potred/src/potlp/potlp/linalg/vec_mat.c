@@ -588,8 +588,7 @@ extern int spMatRuizScal( int m, int n, int *Ap, int *Ai, double *Ax, double *D,
     for ( int i = 0; i < nCol; ++i ) {
         ruizScalDiagCol[i] = 1.0 / ruizScalDiagCol[i];
     }
-    
-    
+        
 exit_cleanup:
     
     POTLP_FREE(ruizWorkDiagRow);
@@ -602,6 +601,10 @@ exit_cleanup:
 extern int spMatPCScal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, double *E, int maxIter ) {
     
     pot_int retcode = RETCODE_OK;
+    
+    if ( maxIter == 0 ) {
+        return retcode;
+    }
     
     pot_int nRow = m;
     pot_int nCol = n;
