@@ -13,7 +13,7 @@ extern void daxpy( int *n, double *a, double *x, int *incx, double *y, int *incy
 extern double ddot( int *n, double *x, int *incx, double *y, int *incy );
 extern void dscal( int *n, double *sa, double *sx, int *incx );
 extern void drscl( int *n, double *sa, double *sx, int *incx );
-extern int idamax( int *n, double *x, int *incx );
+extern int iamax( int *n, double *x, int *incx );
 extern void dgemv( char *trans, int *m, int *n, double *alpha,
                    double *a, int *lda, double *x, int *incx,
                    double *beta, double *y, int *incy );
@@ -115,7 +115,7 @@ extern void rscl( pot_int *n, double *sa, double *sx, pot_int *incx ) {
     return;
 }
 
-extern pot_int idamax( pot_int *n, double *x, pot_int *incx ) {
+extern pot_int iamax( pot_int *n, double *x, pot_int *incx ) {
     
     pot_int idmax = 0;
     double damax = 0.0;

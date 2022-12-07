@@ -239,7 +239,7 @@ extern double potVecConeMin( pot_vec *pVecX ) {
 extern double potVecConeMax( pot_vec *pVecX ) {
     
     int ishift = pVecX->n - pVecX->ncone;
-    int idmin = idamax(&pVecX->ncone, pVecX->x + ishift, &potIntConstantOne);
+    int idmin = iamax(&pVecX->ncone, pVecX->x + ishift, &potIntConstantOne);
     
     return pVecX->x[ishift + idmin];
 }

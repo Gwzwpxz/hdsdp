@@ -17,7 +17,7 @@ extern void axpy( pot_int *n, double *a, double *x, pot_int *incx, double *y, po
 extern double dot( pot_int *n, double *x, pot_int *incx, double *y, pot_int *incy );
 extern void scal( pot_int *n, double *sa, double *sx, pot_int *incx );
 extern void rscl( pot_int *n, double *sa, double *sx, pot_int *incx );
-extern pot_int idamax( pot_int *n, double *x, pot_int *incx );
+extern pot_int iamax( pot_int *n, double *x, pot_int *incx );
 extern pot_int idamin( pot_int *n, double *x, pot_int *incx );
 
 extern pot_int psyev( pot_int n, double *U, double *d, double *Y,
