@@ -1,4 +1,4 @@
-function [] = test_netlib(fname, maxiter, maxtime, maxmn, minmn, fileID)
+function [] = test_netlib(fname, param, maxmn, minmn, fileID)
 
 data = preprocess(fname);
 A = data.A;
@@ -7,46 +7,23 @@ c = data.c;
 
 [m, n] = size(A);
 
-% linesearch = false;
-% neweigs = false;
-
 if max(m, n) > maxmn || min(m, n) < minmn
-    % Prob pObj dObj pInf dInf rGap Time Status
     fprintf(fileID, "| %30s | %+3.1e | %+3.1e | %3.1e | %3.1e | %3.1e | %5.1f | %s \n",...
         fname, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "Ignored");
     return;
 end % End if
 
-params.maxIter = maxiter;
-params.maxRuizIter = 0;
-params.maxTime = maxtime;
-params.coefScal = 0;
-params.curvature = 0;
-params.curvInterval = 0;
-params.RScalFreq = 1000000;
-params.PI_RestartMax = 1.0;
-params.PI_RestartRate = -1;
-params.relFeasTol = 1e-06;
-params.relOptTol = 1e-06;
-
-% scaler = max([abs(b); abs(c)]);
-% if scaler > 1e+04
-%     scaler = 1e+04;
-% elseif scaler < 1e-04
-%     scaler = 1;
-% end % End if
-
-scaler = 1;
-
 tic;
 
-[x, y, s] = potlp(A, b, c, params);
+try
+    [x, y, s] = potlp(A, b, c, param);
+catch
+    x = zeros(n, 1);
+    s = zeros(n, 1);
+    y = zeros(m, 1);
+end % End try
+
 t = toc;
-
-x = x * scaler;
-s = s * scaler;
-y = y * scaler;
-
 pobj = c' * x;
 dobj = b' * y;
 pres = norm(A * x - b) / ( 1 + norm(b, 1) );
@@ -64,5 +41,6 @@ else
 end % End if
 
 fprintf(fileID, "| %30s | %+3.1e | %+3.1e | %3.1e | %3.1e | %3.1e | %5.1f | %s \n",...
-        fname, pobj, dobj, pres, dres, cpl, t, status);
+    fname, pobj, dobj, pres, dres, cpl, t, status);
+
 end % End function
