@@ -494,7 +494,9 @@ static void POT_FNAME(LPSolverIObjScale)( potlp_solver *potlp ) {
     potlp->objScaler = 1.0;
     potlp->rhsScaler = 1.0;
     
-    if ( potlp->lpObjNorm > 1e+08 || potlp->lpRHSNorm > 1e+08 ) {
+    double bcRatio = rhsOneNorm / objOneNorm;
+    
+    if ( potlp->lpObjNorm > 1e+08 || potlp->lpRHSNorm > 1e+08 || bcRatio < 1e-03 || bcRatio > 1e+03 ) {
         potlp->intParams[INT_PARAM_COEFSCALE] = 1;
     }
     
@@ -504,8 +506,7 @@ static void POT_FNAME(LPSolverIObjScale)( potlp_solver *potlp ) {
         int iMaxAbsc = idamax(&potlp->nCol, lpObj, &potIntConstantOne);
         double maxAbsb = fabs(lpRHS[iMaxAbsb]);
         double maxAbsc = fabs(lpObj[iMaxAbsc]);
-        double bcRatio = rhsOneNorm / objOneNorm;
-
+        
         if ( bcRatio > 1e+03 ) {
             potlp->rhsScaler = maxAbsb + 1.0;
         } else if ( bcRatio < 0.001 ) {

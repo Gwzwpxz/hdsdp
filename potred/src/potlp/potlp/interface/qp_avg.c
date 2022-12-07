@@ -94,6 +94,11 @@ static pot_int potQPISolve( pot_qpsolver *potQP, double pObjTarget ) {
     
     int iter, info;
     
+#ifdef POTQP_DEBUG
+    POTQP_DEBUG("-------------------------------------"
+                "-------------------------------------\n");
+#endif
+    
     /* Start the interior point iteration */
     for ( iter = 0; iter < 100 && mu > 1e-10; ++iter ) {
         
@@ -209,7 +214,7 @@ static pot_int potQPISolve( pot_qpsolver *potQP, double pObjTarget ) {
         }
         
 #ifdef POTQP_DEBUG
-        if ( iter % 10 == 0 ) {
+        if ( iter % 2 == 0 ) {
             gemv(&potCharConstantNoTrans, &nQPRow, &nFreeCol, &potDblConstantOne, V, &nQPRow,
                  alpha, &potIntConstantOne, &potDblConstantZero, buffer, &potIntConstantOne);
             for ( int i = 0; i < nQPRow; ++i ) {
@@ -224,13 +229,15 @@ static pot_int potQPISolve( pot_qpsolver *potQP, double pObjTarget ) {
                 buffer[i] += nu;
             }
             double dInf = nrm2(&nFreeCol, buffer, &potIntConstantOne);
-            printf("%3d %10.6e %10.3e %10.3e %10.3e \n", iter + 1, pObjVal, pInf, dInf, mu);
+            printf("  %3d %10.6e %10.3e %10.3e %10.3e \n", iter + 1, pObjVal, pInf, dInf, mu);
         }
 #endif
     }
     
 #ifdef POTQP_DEBUG
-    POTQP_DEBUG("[QP] Obj. Reduction rate %f \n", pObjBest / pObjTarget);
+    POTQP_DEBUG("   [QP] Obj. Reduction rate %f \n", pObjBest / pObjTarget);
+    POTQP_DEBUG("-------------------------------------"
+                "-------------------------------------\n");
 #endif
     
     /* Subspace does not contain a better point */

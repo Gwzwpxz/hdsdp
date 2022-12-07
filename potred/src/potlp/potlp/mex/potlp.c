@@ -152,6 +152,25 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
     potlp_solver *potlp = NULL;
     retcode = POT_FNAME(LPSolverCreate)(&potlp);
     
+    /* Set parameters */
+    potlp->intParams[INT_PARAM_MAXITER] = maxIter;
+    potlp->intParams[INT_PARAM_MAXRUIZITER] = maxRuizIter;
+    potlp->intParams[INT_PARAM_MAXPCITER] = maxPCIter;
+    potlp->intParams[INT_PARAM_COEFSCALE] = coefScal;
+    potlp->intParams[INT_PARAM_CURVATURE] = curvature;
+    potlp->intParams[INT_PARAM_CURVINTERVAL] = curvInterval;
+    potlp->intParams[INT_PARAM_RSCALFREQ] = rscalFreq;
+    potlp->intParams[INT_PARAM_QPWINDOW] = qpWindow;
+    potlp->intParams[INT_PARAM_RECORDFREQ] = recordFreq;
+    
+    potlp->dblParams[DBL_PARAM_RELFEASTOL] = relFeasTol;
+    potlp->dblParams[DBL_PARAM_RELOPTTOL] = relOptTol;
+    potlp->dblParams[DBL_PARAM_TIMELIMIT] = maxTime;
+    
+    /* Internal Parameters */
+    potlp->dblParams[iParamRestartRate] = ParamRestartRate;
+    potlp->dblParams[iParamRestartMax] = ParamRestartMax;
+    
     if ( retcode != RETCODE_OK ) {
         retcode = RETCODE_FAILED;
         printf("Error on line %d \n", __LINE__);
@@ -199,25 +218,6 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
         printf("Error on line %d \n", __LINE__);
         goto exit_cleanup;
     }
-    
-    /* Set parameters */
-    potlp->intParams[INT_PARAM_MAXITER] = maxIter;
-    potlp->intParams[INT_PARAM_MAXRUIZITER] = maxRuizIter;
-    potlp->intParams[INT_PARAM_MAXPCITER] = maxPCIter;
-    potlp->intParams[INT_PARAM_COEFSCALE] = coefScal;
-    potlp->intParams[INT_PARAM_CURVATURE] = curvature;
-    potlp->intParams[INT_PARAM_CURVINTERVAL] = curvInterval;
-    potlp->intParams[INT_PARAM_RSCALFREQ] = rscalFreq;
-    potlp->intParams[INT_PARAM_QPWINDOW] = qpWindow;
-    potlp->intParams[INT_PARAM_RECORDFREQ] = recordFreq;
-    
-    potlp->dblParams[DBL_PARAM_RELFEASTOL] = relFeasTol;
-    potlp->dblParams[DBL_PARAM_RELOPTTOL] = relOptTol;
-    potlp->dblParams[DBL_PARAM_TIMELIMIT] = maxTime;
-    
-    /* Internal Parameters */
-    potlp->dblParams[iParamRestartRate] = ParamRestartRate;
-    potlp->dblParams[iParamRestartMax] = ParamRestartMax;
     
     if ( verbose ) {
         POT_FNAME(LPSolverParamsPrint)(potlp);
