@@ -10,9 +10,9 @@
  */
 typedef struct {
     
-    int nRowAll;
-    int nRow;
-    int nQuadCol;
+    pot_int nRowAll;
+    pot_int nRow;
+    pot_int nQuadCol;
     
     double *QMatElem;
     double *colMatElem;
@@ -46,7 +46,7 @@ extern "C" {
 
 extern pot_int potQPCreate( pot_qpsolver **ppotQP );
 extern pot_int potQPInit( pot_qpsolver *potQP, pot_int nQuadCol, pot_int nRowAll, pot_int nRow );
-extern void potQPLoadProb( pot_qpsolver *potQP, pot_int nIter, pot_int nCol, pot_int nRow,
+extern void potQPLoadProb( pot_qpsolver *potQP, int nIter, pot_int nCol, pot_int nRow,
                            pot_int nCone, double *gradWindow, double *xVarWindow );
 extern pot_int potQPSolveProb( pot_qpsolver *potQP, double targetObj, double *xAvg );
 extern void potQPClear( pot_qpsolver *potQP );

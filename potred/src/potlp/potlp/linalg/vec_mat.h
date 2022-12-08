@@ -48,8 +48,8 @@ extern void spMatColScal( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, doubl
 extern int spMatBuildQMat( pot_int qm, pot_int qn, pot_int *Qp, pot_int *Qi, double *Qx,
                            pot_int am, pot_int an, pot_int *Ap, pot_int *Ai, double *Ax,
                            double *b, double *c );
-extern int spMatRuizScal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E, pot_int maxIter );
-extern int spMatPCScal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E, pot_int maxIter );
+extern int spMatRuizScal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E, int maxIter );
+extern int spMatPCScal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E, int maxIter );
 extern int spMatL2Scal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E );
 
 #endif /* vec_mat_h */

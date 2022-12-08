@@ -26,9 +26,17 @@
 #define set_pardiso_param(iparm, param, val) iparm[param] = val
 #define get_pardiso_output(iparm, param) iparm[param]
 
+#ifdef POTLP64
+#include "pot_def.h"
+extern void pardisoinit ( void *, pot_int *, pot_int * );
+extern void pardiso     ( void     *, pot_int    *, pot_int *, pot_int *, pot_int *, pot_int *,
+                          double   *, pot_int    *, pot_int *, pot_int *, pot_int *, pot_int *,
+                          pot_int *, double      *, double   *, pot_int * );
+#else
 extern void pardisoinit ( void *, int *, int * );
 extern void pardiso     ( void     *, int    *, int *, int *, int *, int *,
                           double   *, int    *, int *, int *, int *, int *,
                           int *, double      *, double   *, int * );
+#endif
 
 #endif /* pardiso_h */
