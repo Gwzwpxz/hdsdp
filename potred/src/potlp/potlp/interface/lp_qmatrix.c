@@ -68,9 +68,9 @@ extern pot_int LPQMatInit( lp_qmatrix *QMat, pot_int nCol, pot_int nRow, pot_int
           [  b'  -c'  0  -1   0 ]
     */
     
-    int nColMatElem = colMatBeg[nCol];
+    pot_int nColMatElem = colMatBeg[nCol];
     /* 2 * nnz(A) + 2 * m + 3 * n [+ 1] kappa would give an extra entry  */
-    int nQMatElem = 2 * nColMatElem + 2 * nRow + 3 * nCol + 1;
+    pot_int nQMatElem = 2 * nColMatElem + 2 * nRow + 3 * nCol + 1;
     
     POTLP_INIT(QMat->QMatBeg, pot_int, QMat->nColQ + 1);
     POTLP_INIT(QMat->QMatIdx, pot_int, nQMatElem);
@@ -202,7 +202,7 @@ extern void LPQMatTransMultiply( lp_qmatrix *QMat, int *isColBasic, double *yVal
 /** @brief Q Matrix projective transformation
  *
  */
-extern void LPQMatProjTransform( lp_qmatrix *QMat, int coneStart, double *xVal ) {
+extern void LPQMatProjTransform( lp_qmatrix *QMat, pot_int coneStart, double *xVal ) {
     
     pot_int *QMatBeg = QMat->QMatBeg;
     double  *QMatElem = QMat->QMatElem;

@@ -12,7 +12,7 @@
 
 #include <math.h>
 
-static double LpNewtonIBarrier( int nCol, double *x, double *s, double kappa, double tau ) {
+static double LpNewtonIBarrier( pot_int nCol, double *x, double *s, double kappa, double tau ) {
     
     double mu = kappa * tau;
     for ( int i = 0; i < nCol; ++i ) {
@@ -22,7 +22,7 @@ static double LpNewtonIBarrier( int nCol, double *x, double *s, double kappa, do
     return mu / (nCol + 1);
 }
 
-static double LpNewtonIRatioTest( int nCol, double *x, double *dx, double *s, double *ds,
+static double LpNewtonIRatioTest( pot_int nCol, double *x, double *dx, double *s, double *ds,
                                   double kappa, double dkappa, double tau, double dtau ) {
     
     /* 1 / abs(min([dx./x; ds./s; dkappa / kappa; dtau./tau])) */
@@ -85,12 +85,12 @@ extern pot_int LpNewtonInit( lp_newton *newton, pot_int nCol, pot_int nRow, pot_
     newton->nCol = nCol;
     newton->nRow = nRow;
     
-    int nzA = colMatBeg[nCol];
-    int ntCol = nRow + nCol;
-    int ntNnz = nzA + nCol + nRow;
+    pot_int nzA = colMatBeg[nCol];
+    pot_int ntCol = nRow + nCol;
+    pot_int ntNnz = nzA + nCol + nRow;
         
-    POTLP_INIT(newton->AugBeg, int, ntCol + 1);
-    POTLP_INIT(newton->AugIdx, int, ntNnz);
+    POTLP_INIT(newton->AugBeg, pot_int, ntCol + 1);
+    POTLP_INIT(newton->AugIdx, pot_int, ntNnz);
     POTLP_INIT(newton->AugElem, double, ntNnz);
     POTLP_INIT(newton->colBackup, double, nzA + nCol);
     
@@ -104,8 +104,8 @@ extern pot_int LpNewtonInit( lp_newton *newton, pot_int nCol, pot_int nRow, pot_
         goto exit_cleanup;
     }
     
-    int *Ap = newton->AugBeg;
-    int *Ai = newton->AugIdx;
+    pot_int *Ap = newton->AugBeg;
+    pot_int *Ai = newton->AugIdx;
     
     /* Build up matrix */
     for ( int i = 0, j; i < nCol; ++i ) {
@@ -149,15 +149,15 @@ exit_cleanup:
 /** @brief Implement one Newton's step
  * Currently no centering step is taken. On exit, colVal, rowDual, colDual, kappa, tau are modified by a Newton's step
  */
-extern pot_int LpNewtonOneStep( lp_newton *newton, double *lpObj, double *lpRHS, int *colMatBeg, int *colMatIdx, double *colMatElem,
+extern pot_int LpNewtonOneStep( lp_newton *newton, double *lpObj, double *lpRHS, pot_int *colMatBeg, pot_int *colMatIdx, double *colMatElem,
                                 double *colVal, double *rowDual, double *colDual, double *kappa, double *tau,
                                 double *pRes, double *dRes, double pObjVal, double dObjVal, double spxSize ) {
     
     pot_int retcode = RETCODE_OK;
     
-    int nCol = newton->nCol;
-    int nRow = newton->nRow;
-    int nNt = nCol + nRow;
+    pot_int nCol = newton->nCol;
+    pot_int nRow = newton->nRow;
+    pot_int nNt = nCol + nRow;
     
     /* Prepare iteration */
     double *b = lpRHS, *c = lpObj, kval = *kappa, tval = *tau;
@@ -171,7 +171,7 @@ extern pot_int LpNewtonOneStep( lp_newton *newton, double *lpObj, double *lpRHS,
     newton->mu = mu;
     
     /* Prepare Newton's system */
-    int *ADBeg = newton->AugBeg;
+    pot_int *ADBeg = newton->AugBeg;
     double *ADElem = newton->AugElem;
     double xsi = 0.0;
     double minXSi = kval * tval;

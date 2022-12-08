@@ -39,7 +39,7 @@ static double potQPIGetMu( pot_qpsolver *potQP ) {
     return (mu / potQP->nRow);
 }
 
-static double potQPIRatioTest( int nQPRow, double *s, double *ds, double *lbd, double *dlbd ) {
+static double potQPIRatioTest( pot_int nQPRow, double *s, double *ds, double *lbd, double *dlbd ) {
     
     double stepTemp = POTLP_INFINITY;
     double ratio;
@@ -65,7 +65,7 @@ static pot_int potQPISolve( pot_qpsolver *potQP, double pObjTarget ) {
     
     pot_int retcode = RETCODE_OK;
     
-    int nFreeCol = potQP->nQuadCol, nQPRow = potQP->nRow;
+    pot_int nFreeCol = potQP->nQuadCol, nQPRow = potQP->nRow;
     
     potQPIInit(potQP);
     
@@ -86,8 +86,8 @@ static pot_int potQPISolve( pot_qpsolver *potQP, double pObjTarget ) {
     double *buffer = potQP->buffer;
     
     double eTd1, eTd2, eTalpha, dnu, step, musigma;
-    int nQuadElem = nFreeCol * nFreeCol;
-    int nColMatElem = nFreeCol * nQPRow;
+    pot_int nQuadElem = nFreeCol * nFreeCol;
+    pot_int nColMatElem = nFreeCol * nQPRow;
     double mu = 1.0, sigma = 0.1, nu = 0.0;
     double pObjVal = POTLP_INFINITY;
     double pObjBest = pObjVal;
@@ -275,7 +275,7 @@ exit_cleanup:
     return retcode;
 }
 
-extern pot_int potQPInit( pot_qpsolver *potQP, int nQuadCol, int nRowAll, int nRow ) {
+extern pot_int potQPInit( pot_qpsolver *potQP, pot_int nQuadCol, pot_int nRowAll, pot_int nRow ) {
     
     pot_int retcode = RETCODE_OK;
     
@@ -324,7 +324,7 @@ exit_cleanup:
 /** @brief Load QP into the IPM solver
  *
  */
-extern void potQPLoadProb( pot_qpsolver *potQP, int nIter, int nCol, int nRow, int nCone, double *gradWindow, double *xVarWindow ) {
+extern void potQPLoadProb( pot_qpsolver *potQP, int nIter, pot_int nCol, pot_int nRow, pot_int nCone, double *gradWindow, double *xVarWindow ) {
     
     /* Set up Q = X' * A' * A * X */
     double *QMatElem = potQP->QMatElem;

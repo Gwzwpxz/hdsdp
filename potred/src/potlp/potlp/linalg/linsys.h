@@ -23,7 +23,7 @@ typedef struct {
 extern pot_int potLinsysCreate( pot_linsys **ppotLinsys );
 extern pot_int potLinsysInit( pot_linsys *potLinsys, pot_int nCol );
 extern pot_int potLinsysSymFactorize( pot_linsys *potLinsys, pot_int *colMatBeg, pot_int *colMatIdx );
-extern pot_int potLinsysNumFactorize( pot_linsys *potLinsys, int *colMatBeg, int *colMatIdx, double *colMatElem );
+extern pot_int potLinsysNumFactorize( pot_linsys *potLinsys, pot_int *colMatBeg, pot_int *colMatIdx, double *colMatElem );
 extern pot_int potLinsysSolve( pot_linsys *potLinsys, double *rhsVec, double *solVec );
 extern void potLinsysSwitchToBackup( pot_linsys *potLinsys );
 extern void potLinsysClear( pot_linsys *potLinsys );

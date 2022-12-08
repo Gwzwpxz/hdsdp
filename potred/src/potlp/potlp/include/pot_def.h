@@ -23,7 +23,7 @@ typedef int pot_int;
 #else
 #include <stdint.h>
 #ifdef POTLP64
-typedef long int pot_int;
+typedef int64_t pot_int;
 #define ID "%ld"
 #else
 typedef int pot_int;

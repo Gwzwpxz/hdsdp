@@ -20,22 +20,22 @@
 #endif
 
 /* Blas functions */
-extern double dnrm2( int *n, double *x, int *incx );
-extern void daxpy( int *n, double *a, double *x, int *incx, double *y, int *incy );
-extern double ddot( int *n, double *x, int *incx, double *y, int *incy );
-extern void dscal( int *n, double *sa, double *sx, int *incx );
-extern void drscl( int *n, double *sa, double *sx, int *incx );
-extern int idamax( int *n, double *x, int *incx );
-extern void dgemv( char *trans, int *m, int *n, double *alpha,
-                   double *a, int *lda, double *x, int *incx,
-                   double *beta, double *y, int *incy );
-extern void dsyrk( char *uplo, char *trans, int *n, int *k, double *alpha,
-                   double *a, int *lda, double *beta, double *c, int *ldc );
-extern void dsymv( char *uplo, int *n, double *alpha, double *a, int *lda,
-                  double *x, int *incx, double *beta, double *y, int *incy );
-extern void dpotrf( char *uplo, int *n, double *a, int *lda, int *info );
-extern void dpotrs( char *uplo, int *n, int *nrhs, double *a, int *lda,
-                    double *b, int *ldb, int *info );
+extern double dnrm2( pot_int *n, double *x, pot_int *incx );
+extern void daxpy( pot_int *n, double *a, double *x, pot_int *incx, double *y, pot_int *incy );
+extern double ddot( pot_int *n, double *x, pot_int *incx, double *y, pot_int *incy );
+extern void dscal( pot_int *n, double *sa, double *sx, pot_int *incx );
+extern void drscl( pot_int *n, double *sa, double *sx, pot_int *incx );
+extern pot_int idamax( pot_int *n, double *x, pot_int *incx );
+extern void dgemv( char *trans, pot_int *m, pot_int *n, double *alpha,
+                   double *a, pot_int *lda, double *x, pot_int *incx,
+                   double *beta, double *y, pot_int *incy );
+extern void dsyrk( char *uplo, char *trans, pot_int *n, pot_int *k, double *alpha,
+                   double *a, pot_int *lda, double *beta, double *c, pot_int *ldc );
+extern void dsymv( char *uplo, pot_int *n, double *alpha, double *a, pot_int *lda,
+                  double *x, pot_int *incx, double *beta, double *y, pot_int *incy );
+extern void dpotrf( char *uplo, pot_int *n, double *a, pot_int *lda, pot_int *info );
+extern void dpotrs( char *uplo, pot_int *n, pot_int *nrhs, double *a, pot_int *lda,
+                    double *b, pot_int *ldb, pot_int *info );
 
 extern double nrm2( pot_int *n, double *x, pot_int *incx ) {
 #ifdef MYBLAS
@@ -294,7 +294,7 @@ extern void pgemv( pot_int m, pot_int n, double *M, double *v, double *y ) {
     return;
 }
 
-extern void spMatAxpy( int n, int *Ap, int *Ai, double *Ax, double a, double *x, double *y ) {
+extern void spMatAxpy( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double a, double *x, double *y ) {
     
     for ( int i = 0, j; i < n; ++i ) {
         for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
@@ -305,7 +305,7 @@ extern void spMatAxpy( int n, int *Ap, int *Ai, double *Ax, double a, double *x,
     return;
 }
 
-extern void spMatATxpy( int n, int *Ap, int *Ai, double *Ax, double a, double *x, double *y ) {
+extern void spMatATxpy( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double a, double *x, double *y ) {
     
     for ( int i = 0, j; i < n; ++i ) {
         double aTy = 0.0;
@@ -318,7 +318,7 @@ extern void spMatATxpy( int n, int *Ap, int *Ai, double *Ax, double a, double *x
     return;
 }
 
-extern void spMatMaxRowAbs( int n, int *Ap, int *Ai, double *Ax, double *row ) {
+extern void spMatMaxRowAbs( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *row ) {
     
     double x = 0.0;
     for ( int i = 0, j; i < n; ++i ) {
@@ -331,7 +331,7 @@ extern void spMatMaxRowAbs( int n, int *Ap, int *Ai, double *Ax, double *row ) {
     return;
 }
 
-extern void spMatMaxColAbs( int n, int *Ap, int *Ai, double *Ax, double *col ) {
+extern void spMatMaxColAbs( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *col ) {
     
     double cmax = 0.0, x = 0.0;
     for ( int i = 0, j; i < n; ++i ) {
@@ -346,7 +346,7 @@ extern void spMatMaxColAbs( int n, int *Ap, int *Ai, double *Ax, double *col ) {
     return;
 }
 
-extern void spMatSumRowAbs( int n, int *Ap, int *Ai, double *Ax, double *row ) {
+extern void spMatSumRowAbs( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *row ) {
     
     for ( int i = 0, j; i < n; ++i ) {
         for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
@@ -357,7 +357,7 @@ extern void spMatSumRowAbs( int n, int *Ap, int *Ai, double *Ax, double *row ) {
     return;
 }
 
-extern void spMatSumColAbs( int n, int *Ap, int *Ai, double *Ax, double *col ) {
+extern void spMatSumColAbs( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *col ) {
     
     for ( int i = 0, j; i < n; ++i ) {
         for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
@@ -368,7 +368,7 @@ extern void spMatSumColAbs( int n, int *Ap, int *Ai, double *Ax, double *col ) {
     return;
 }
 
-extern void spMatRowScal( int n, int *Ap, int *Ai, double *Ax, double *row ) {
+extern void spMatRowScal( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *row ) {
     
     for ( int i = 0, j; i < n; ++i ) {
         for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
@@ -379,7 +379,7 @@ extern void spMatRowScal( int n, int *Ap, int *Ai, double *Ax, double *row ) {
     return;
 }
 
-extern void spMatColScal( int n, int *Ap, int *Ai, double *Ax, double *col ) {
+extern void spMatColScal( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *col ) {
     
     for ( int i = 0, j; i < n; ++i ) {
         for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
@@ -390,20 +390,20 @@ extern void spMatColScal( int n, int *Ap, int *Ai, double *Ax, double *col ) {
     return;
 }
 
-extern int spMatBuildQMat( int qm, int qn, int *Qp, int *Qi, double *Qx,
-                           int am, int an, int *Ap, int *Ai, double *Ax,
+extern int spMatBuildQMat( pot_int qm, pot_int qn, pot_int *Qp, pot_int *Qi, double *Qx,
+                           pot_int am, pot_int an, pot_int *Ap, pot_int *Ai, double *Ax,
                            double *b, double *c ) {
     
     pot_int retcode = RETCODE_OK;
     
     /* Auxiliary array */
-    int *amaux = NULL;
-    int *anaux = NULL;
+    pot_int *amaux = NULL;
+    pot_int *anaux = NULL;
     
     int nzA = Ap[an];
     
-    POTLP_INIT(amaux, int, am + 1);
-    POTLP_INIT(anaux, int, an + 1);
+    POTLP_INIT(amaux, pot_int, am + 1);
+    POTLP_INIT(anaux, pot_int, an + 1);
     
     if ( !amaux || !anaux ) {
         retcode = RETCODE_FAILED;
@@ -429,7 +429,7 @@ extern int spMatBuildQMat( int qm, int qn, int *Qp, int *Qi, double *Qx,
         amaux[i + 1] += amaux[i];
     }
     
-    POTLP_MEMCPY(Qp, amaux, int, am + 1);
+    POTLP_MEMCPY(Qp, amaux, pot_int, am + 1);
     for ( int i = 0, j, k; i < an; ++i ) {
         for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
             k = amaux[Ai[j]];
@@ -454,18 +454,18 @@ extern int spMatBuildQMat( int qm, int qn, int *Qp, int *Qi, double *Qx,
         anaux[i] = Ap[i] + anaux[0] + i; /* i reserved for c' */
     }
     
-    int *pQp = Qp + am;
-    int *pQi = Qi + nzA + am;
-    int *pAi = Ai;
+    pot_int *pQp = Qp + am;
+    pot_int *pQi = Qi + nzA + am;
+    pot_int *pAi = Ai;
     double *pQx = Qx + nzA + am;
     double *pAx = Ax;
 
-    POTLP_MEMCPY(pQp, anaux, int, an + 1);
+    POTLP_MEMCPY(pQp, anaux, pot_int, an + 1);
     pQp += an;
     for ( int i = 0, k; i < an; ++i ) {
         /* Copy A */
         k = Ap[i + 1] - Ap[i];
-        POTLP_MEMCPY(pQi, pAi, int, k);
+        POTLP_MEMCPY(pQi, pAi, pot_int, k);
         POTLP_MEMCPY(pQx, pAx, double, k);
         /* Copy -c */
         pQi += k; pAi += k;
@@ -516,7 +516,7 @@ exit_cleanup:
 }
 
 #define RUIZ_DEBUG(format, info) // printf(format, info);
-extern int spMatRuizScal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, double *E, int maxIter ) {
+extern int spMatRuizScal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E, int maxIter ) {
     
     pot_int retcode = RETCODE_OK;
     
@@ -604,7 +604,7 @@ exit_cleanup:
 }
 
 #define PC_DEBUG(info)
-extern int spMatPCScal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, double *E, int maxIter ) {
+extern int spMatPCScal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E, int maxIter ) {
     
     pot_int retcode = RETCODE_OK;
     
@@ -664,7 +664,7 @@ exit_cleanup:
 }
 
 
-extern int spMatL2Scal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, double *E ) {
+extern int spMatL2Scal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E ) {
     
     pot_int retcode = RETCODE_OK;
     

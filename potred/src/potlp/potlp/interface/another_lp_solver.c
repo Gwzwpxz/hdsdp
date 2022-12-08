@@ -142,8 +142,8 @@ static pot_int POT_FNAME(potLpNewtonStep) ( potlp_solver *potlp ) {
     potVecCopy(pot->xVec, pot->xVecOld);
     double *xNew = pot->xVec->x;
     
-    int nCol = potlp->nCol;
-    int nRow = potlp->nRow;
+    pot_int nCol = potlp->nCol;
+    pot_int nRow = potlp->nRow;
     
     POTLP_MEMCPY(xNew, potlp->rowDual, double, nRow);
     xNew += nRow;
@@ -245,7 +245,7 @@ static double POT_FNAME(potLpObjFImplVal)( void *objFData, pot_vec *xVec ) {
     
     potlp_solver *potlp = (potlp_solver *) objFData;
     POT_FNAME(potLpObjFISetupRes)(potlp, xVec);
-    int nRes = potlp->nRow + potlp->nCol + 1;
+    pot_int nRes = potlp->nRow + potlp->nCol + 1;
     double objFVal = nrm2(&nRes, potlp->pdcRes, &potIntConstantOne);
     
     return 0.5 * objFVal * objFVal;
@@ -430,7 +430,7 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
     
     /* Export history */
     if ( potlp->nIter % potlp->nRecordFreq == 0 ) {
-        int nResi = potlp->nRow + potlp->nCol + 1;
+        pot_int nResi = potlp->nRow + potlp->nCol + 1;
         potVecExport(potlp->potIterator->xVecOld, potlp->xHistory + potlp->nItsInRound * potlp->potIterator->n);
         POTLP_MEMCPY(potlp->resiHistory + potlp->nItsInRound * nResi, potlp->resiBuffer, double, nResi);
         potlp->nItsInRound += 1;
@@ -577,9 +577,9 @@ static pot_int POT_FNAME(LPSolverIScalInplace)( potlp_solver *potlp ) {
     vvscl(&nRow, inpScalWorkRow, lpRHS);
     vvscl(&nCol, inpScalWorkCol, lpObj);
     
-    int iMaxAbsb = idamax(&nRow, lpRHS, &potIntConstantOne);
+    pot_int iMaxAbsb = idamax(&nRow, lpRHS, &potIntConstantOne);
     double maxAbsb = fabs(lpRHS[iMaxAbsb]);
-    int iMaxAbsc = idamax(&nCol, lpObj, &potIntConstantOne);
+    pot_int iMaxAbsc = idamax(&nCol, lpObj, &potIntConstantOne);
     double maxAbsc = fabs(lpObj[iMaxAbsc]);
     
     double pscal = POTLP_MIN(maxAbsb, 1e+04);
@@ -665,7 +665,7 @@ static void POT_FNAME(LPSolverIParamAdjust)( potlp_solver *potlp ) {
 
 static void POT_FNAME(LPSolverIHeurInitialize)( potlp_solver *potlp ) {
     
-    int nColQ = potlp->potQMatrix->nColQ;
+    pot_int nColQ = potlp->potQMatrix->nColQ;
     int *isColBasic = potlp->isColBasic;
     
     /* Initialize basis status */
@@ -689,8 +689,8 @@ static void POT_FNAME(LPSolverIRetrieveSolution)( potlp_solver *potlp ) {
     
     pot_solver *pot = potlp->potIterator;
     
-    int nCol = potlp->nCol;
-    int nRow = potlp->nRow;
+    pot_int nCol = potlp->nCol;
+    pot_int nRow = potlp->nRow;
     
     potVecExport(pot->xVec, potlp->scalVals);
     LPQMatScalBack(potlp->potQMatrix, potlp->scalVals);

@@ -4,7 +4,7 @@
 
 typedef struct {
     
-    int    n; ///< Dimension of the linear system
+    pot_int    n; ///< Dimension of the linear system
     
     int    *iWork; ///< Working array
     double *dWork; ///< Working array
@@ -21,9 +21,9 @@ typedef struct {
     
     int    n;
     
-    int    *Ap;
-    int    *Ai;
-    double *Ax;
+    pot_int *Ap;
+    pot_int *Ai;
+    double  *Ax;
     
     double *dWork;
     void   *pt[64];
@@ -214,7 +214,7 @@ exit_cleanup:
 }
 
 #define SHOW_ORDERING(ord) // printf("Using ordering %s. \n", ord)
-static int pdsSymbolic( void *ldl, int *Ap, int *Ai ) {
+static int pdsSymbolic( void *ldl, pot_int *Ap, pot_int *Ai ) {
     
     int retcode = RETCODE_OK;
     pds_linsys *pds = (pds_linsys *) ldl;
@@ -228,8 +228,8 @@ static int pdsSymbolic( void *ldl, int *Ap, int *Ai ) {
         goto exit_cleanup;
     }
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_INDEFINITE, phase = PARDISO_PHASE_SYM;
-    int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
+    pot_int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_INDEFINITE, phase = PARDISO_PHASE_SYM;
+    pot_int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
     /* Use amd first */
     int amdFactorNnz = 0;
@@ -248,7 +248,7 @@ static int pdsSymbolic( void *ldl, int *Ap, int *Ai ) {
     amdFactorNnz = get_pardiso_output(pds->iparm, PARDISO_PARAM_FACNNZ);
     
     /* See if nested dissection is better */
-    int ndFactorNnz = 0;
+    pot_int ndFactorNnz = 0;
     set_pardiso_param(pds->iparm, PARDISO_PARAM_SYMBOLIC, PARDISO_PARAM_SYMBOLIC_ND);
     set_pardiso_param(pds->iparm, PARDISO_PARAM_FACNNZ, -1);
     pardiso(pds->pt, &maxfct, &mnum, &mtype, &phase,
@@ -272,15 +272,15 @@ exit_cleanup:
     return retcode;
 }
 
-static int pdsScalNumeric( void *ldl, int *Ap, int *Ai, double *Ax ) {
+static int pdsScalNumeric( void *ldl, pot_int *Ap, pot_int *Ai, double *Ax ) {
     
     /* Rescue the IPM if factorization fails due to the highly indefinite system */
     int retcode = RETCODE_OK;
     pds_linsys *pds = (pds_linsys *) ldl;
     pds->Ax = Ax;
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_INDEFINITE, phase = PARDISO_PHASE_SYM_FAC;
-    int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
+    pot_int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_INDEFINITE, phase = PARDISO_PHASE_SYM_FAC;
+    pot_int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
     set_pardiso_param(pds->iparm, PARDISO_PARAM_SCALING, 1);
     set_pardiso_param(pds->iparm, PARDISO_PARAM_MATCHING, 1);
@@ -298,14 +298,14 @@ exit_cleanup:
     return retcode;
 }
 
-static int pdsNumeric( void *ldl, int *Ap, int *Ai, double *Ax ) {
+static int pdsNumeric( void *ldl, pot_int *Ap, pot_int *Ai, double *Ax ) {
     
     int retcode = RETCODE_OK;
     pds_linsys *pds = (pds_linsys *) ldl;
     pds->Ax = Ax;
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_INDEFINITE, phase = PARDISO_PHASE_FAC;
-    int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
+    pot_int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_INDEFINITE, phase = PARDISO_PHASE_FAC;
+    pot_int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
     pardiso(pds->pt, &maxfct, &mnum, &mtype, &phase,
             &pds->n, Ax, Ap, Ai, &idummy, &idummy,
@@ -325,8 +325,8 @@ static int pdsSolve( void *ldl, double *bx ) {
     pot_int retcode = RETCODE_OK;
     pds_linsys *pds = (pds_linsys *) ldl;
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_INDEFINITE, phase = PARDISO_PHASE_SOLVE;
-    int idummy = 0, nrhs = 1, msg = 0, pdsret = PARDISO_RET_OK;
+    pot_int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_INDEFINITE, phase = PARDISO_PHASE_SOLVE;
+    pot_int idummy = 0, nrhs = 1, msg = 0, pdsret = PARDISO_RET_OK;
     
     pardiso(pds->pt, &maxfct, &mnum, &mtype, &phase,
             &pds->n, pds->Ax, pds->Ap, pds->Ai, &idummy, &nrhs,
@@ -350,8 +350,8 @@ static void pdsDestroy( void **pldl ) {
     
     if ( pds ) {
         
-        int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_INDEFINITE, phase = PARDISO_PHASE_FREE;
-        int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
+        pot_int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_INDEFINITE, phase = PARDISO_PHASE_FREE;
+        pot_int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
         pardiso(pds->pt, &maxfct, &mnum, &mtype, &phase,
                 &pds->n, pds->Ax, pds->Ap, pds->Ai, &idummy, &idummy,
                 pds->iparm, &msg, NULL, NULL, &pdsret);
@@ -449,7 +449,7 @@ exit_cleanup:
     return retcode;
 }
 
-extern pot_int potLinsysNumFactorize( pot_linsys *potLinsys, int *colMatBeg, int *colMatIdx, double *colMatElem ) {
+extern pot_int potLinsysNumFactorize( pot_linsys *potLinsys, pot_int *colMatBeg, pot_int *colMatIdx, double *colMatElem ) {
     
     pot_int retcode = RETCODE_OK;
     

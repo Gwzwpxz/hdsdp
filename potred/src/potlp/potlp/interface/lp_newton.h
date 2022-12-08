@@ -6,11 +6,11 @@
 
 typedef struct {
     
-    int nCol;
-    int nRow;
+    pot_int nCol;
+    pot_int nRow;
     
-    int    *AugBeg;
-    int    *AugIdx;
+    pot_int *AugBeg;
+    pot_int *AugIdx;
     double *AugElem;
     
     double *colBackup;
