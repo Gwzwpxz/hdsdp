@@ -18,18 +18,21 @@
 #define calloc mxCalloc
 #define printf mexPrintf
 #define free mxFree
-// Define data type
-typedef int pot_int;
-#else
-#include <stdint.h>
+#endif
+
 #ifdef POTLP64
+#include <stdint.h>
 typedef int64_t pot_int;
 #define ID "%ld"
 #else
 typedef int pot_int;
 #define ID "%d"
 #endif
-#endif
+
+//#ifndef MEMWATCH
+//#define MEMWATCH
+//#include "memwatch.h"
+//#endif
 
 // Memory handler
 #define POTLP_FREE(var) do {free((var)); (var) = NULL;} while (0)
