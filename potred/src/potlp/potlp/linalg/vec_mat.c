@@ -5,7 +5,19 @@
 #undef MYBLAS
 #endif
 
-#define MYBLAS
+#ifdef UNDERBLAS
+#define dnrm2 dnrm2_
+#define daxpy daxpy_
+#define ddot ddot_
+#define dscal dscal_
+#define drscl drscl_
+#define dgemv dgemv_
+#define dsyrk dsyrk_
+#define dsymv dsymv_
+#define dpotrf dpotrf_
+#define dpotrs dpotrs_
+#define dsyevr dsyevr_
+#endif
 
 /* Blas functions */
 extern double dnrm2( int *n, double *x, int *incx );
@@ -13,7 +25,7 @@ extern void daxpy( int *n, double *a, double *x, int *incx, double *y, int *incy
 extern double ddot( int *n, double *x, int *incx, double *y, int *incy );
 extern void dscal( int *n, double *sa, double *sx, int *incx );
 extern void drscl( int *n, double *sa, double *sx, int *incx );
-extern int iamax( int *n, double *x, int *incx );
+extern int idamax( int *n, double *x, int *incx );
 extern void dgemv( char *trans, int *m, int *n, double *alpha,
                    double *a, int *lda, double *x, int *incx,
                    double *beta, double *y, int *incy );
@@ -115,7 +127,7 @@ extern void rscl( pot_int *n, double *sa, double *sx, pot_int *incx ) {
     return;
 }
 
-extern pot_int iamax( pot_int *n, double *x, pot_int *incx ) {
+extern pot_int idamax( pot_int *n, double *x, pot_int *incx ) {
     
     pot_int idmax = 0;
     double damax = 0.0;
@@ -145,13 +157,7 @@ extern pot_int idamin( pot_int *n, double *x, pot_int *incx ) {
     return idmin;
 }
 
-#ifdef UNDERBLAS
-#define eig dsyevr_
-#else
-#define eig dsyevr
-#endif
-
-extern void eig( const char     *jobz,
+extern void dsyevr( const char     *jobz,
                  const char     *range,
                  const char     *uplo,
                  const pot_int  *n,

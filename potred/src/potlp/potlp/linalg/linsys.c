@@ -31,6 +31,37 @@ typedef struct {
     
 } pds_linsys;
 
+#ifdef LINSYSDUMMY
+static int dummyCreate( void **pdummy, int n ) {
+    
+    return RETCODE_OK;
+}
+
+static int dummySymbolic( void *dummy, int *Ap, int *Ai ) {
+    
+    return RETCODE_OK;
+}
+
+static int dummyNumeric( void *dummy, int *Ap, int *Ai, double *Ax ) {
+    
+    return RETCODE_OK;
+}
+
+static int dummySolve( void *dummy, double *bx ) {
+    
+    return RETCODE_OK;
+}
+
+static void dummyDestroy( void **pdummy ) {
+    
+    if ( !pdummy ) {
+        return;
+    }
+    
+    POTLP_FREE(*pdummy);
+    return;
+}
+#endif
 
 #ifdef QDLDL
 static int ldlCreate( void **pldl, int n ) {
@@ -357,6 +388,14 @@ extern pot_int potLinsysCreate( pot_linsys **ppotLinsys ) {
     
     potLinsys->backUpLin = 0;
     
+#ifdef LINSYSDUMMY
+    potLinsys->LCreate = dummyCreate;
+    potLinsys->LDestroy = dummyDestroy;
+    potLinsys->LSFac = dummySymbolic;
+    potLinsys->LNFac = dummyNumeric;
+    potLinsys->LNFacBackup = dummyNumeric;
+    potLinsys->LSolve = dummySolve;
+#else
 #ifdef QDLDL
     potLinsys->LCreate = ldlCreate;
     potLinsys->LDestroy = ldlDestroy;
@@ -371,6 +410,7 @@ extern pot_int potLinsysCreate( pot_linsys **ppotLinsys ) {
     potLinsys->LNFac = pdsNumeric;
     potLinsys->LNFacBackup = pdsScalNumeric;
     potLinsys->LSolve = pdsSolve;
+#endif
 #endif
     
     *ppotLinsys = potLinsys;

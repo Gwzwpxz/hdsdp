@@ -289,7 +289,7 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
     }
     
     int logFreq = 0;
-    int useIPM = 0;
+    int useIPM = potlp->useIPM;
     
     if ( potlp->nIter < 1000 ) {
         logFreq = 50;
@@ -316,7 +316,7 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
         isCtrlC = 0; /* Reset the ctrl c status */
     }
     
-    if ( potlp->nIter % logFreq == 0 || potlp->nIter == 1 || intInfo ) {
+    if ( potlp->nIter % logFreq == 0 || potlp->nIter == 1 || intInfo || useIPM ) {
         
         POT_FNAME(LPSolverIRetrieveSolution)(potlp);
         
@@ -387,11 +387,6 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
             *intInfo = 1;
         }
         
-        if ( ((relGap < 10 * relOptTol || minGap < 10 * relOptTol ) && pInfeas < 10 * relFeasTol && dInfeas < 10 * relFeasTol) && (0) ) {
-            printf("Approaching optimality. Using an interior point step to cleanup. \n");
-            useIPM = 1;
-        }
-        
         if ( elapsedTime < 100.0 ) {
             printf("%8lld  %10.3e  %10.3e  %5.1e %5.1e %10.3e  %10.3e  %10.3e |%5.1f [s] \n",
                    potlp->nIter, pObjVal, dObjVal, relGap, minGap, pInfeas,
@@ -408,8 +403,16 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
                    elapsedTime / 3600.0 );
         }
         
+#ifndef DLINSYSDUMMY
+        if ( ((relGap < 5 * relOptTol || minGap < 5 * relOptTol ) && pInfeas < 5 * relFeasTol && dInfeas < 5 * relFeasTol) && !useIPM && !intInfo ) {
+            printf("Approaching optimality. Using an interior point step to cleanup. \n");
+            potlp->useIPM = 1;
+        }
+#endif
+        
         /* Interior point solver */
         if ( useIPM && !intInfo ) {
+            potlp->nBarIter += 1;
             int icode = POT_FNAME(potLpNewtonStep)(potlp);
             if ( icode != RETCODE_OK ) {
                 potlp->Lpstatus = POTLP_NUMERICAL;
@@ -502,8 +505,8 @@ static void POT_FNAME(LPSolverIObjScale)( potlp_solver *potlp ) {
     
     if ( potlp->intParams[INT_PARAM_COEFSCALE] ) {
 #if 1
-        int iMaxAbsb = iamax(&potlp->nRow, lpRHS, &potIntConstantOne);
-        int iMaxAbsc = iamax(&potlp->nCol, lpObj, &potIntConstantOne);
+        int iMaxAbsb = idamax(&potlp->nRow, lpRHS, &potIntConstantOne);
+        int iMaxAbsc = idamax(&potlp->nCol, lpObj, &potIntConstantOne);
         double maxAbsb = fabs(lpRHS[iMaxAbsb]);
         double maxAbsc = fabs(lpObj[iMaxAbsc]);
         
@@ -574,9 +577,9 @@ static pot_int POT_FNAME(LPSolverIScalInplace)( potlp_solver *potlp ) {
     vvscl(&nRow, inpScalWorkRow, lpRHS);
     vvscl(&nCol, inpScalWorkCol, lpObj);
     
-    int iMaxAbsb = iamax(&nRow, lpRHS, &potIntConstantOne);
+    int iMaxAbsb = idamax(&nRow, lpRHS, &potIntConstantOne);
     double maxAbsb = fabs(lpRHS[iMaxAbsb]);
-    int iMaxAbsc = iamax(&nCol, lpObj, &potIntConstantOne);
+    int iMaxAbsc = idamax(&nCol, lpObj, &potIntConstantOne);
     double maxAbsc = fabs(lpObj[iMaxAbsc]);
     
     double pscal = POTLP_MIN(maxAbsb, 1e+04);
@@ -773,6 +776,7 @@ static void POT_FNAME(LPSolverIPrintSolStatistics)( potlp_solver *potlp ) {
     double avgTcurv = (nCurvs == 0) ? 0.0 : curvT / nCurvs;
     printf("\nPotential Reduction statistic \n");
     printf("In all [%d] curvs take [%5.3f] seconds ([%5.3f]s/curv) \n", nCurvs, curvT, avgTcurv);
+    printf("In all [%d] barrier iterations \n", potlp->nBarIter);
     
     /* LP Statistics */
     if ( potlp->Lpstatus == POTLP_OPTIMAL ) {

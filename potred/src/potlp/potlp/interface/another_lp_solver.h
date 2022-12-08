@@ -88,6 +88,8 @@ typedef struct {
     
     /* Interior point solvers */
     lp_newton    *ipm;
+    int useIPM;
+    int nBarIter;
     pot_qpsolver *qp;
     
     /* QP Restart */
