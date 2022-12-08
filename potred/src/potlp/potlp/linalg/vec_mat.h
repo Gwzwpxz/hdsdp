@@ -39,17 +39,17 @@ extern double sumlogdet( pot_int *n, double *x );
 extern void vvscl( pot_int *n, double *s, double *x );
 extern void vvrscl( pot_int *n, double *s, double *x );
 
-extern void spMatAxpy( int n, int *Ap, int *Ai, double *Ax, double a, double *x, double *y );
-extern void spMatATxpy( int n, int *Ap, int *Ai, double *Ax, double a, double *x, double *y );
-extern void spMatMaxRowAbs( int n, int *Ap, int *Ai, double *Ax, double *row );
-extern void spMatMaxColAbs( int n, int *Ap, int *Ai, double *Ax, double *col );
-extern void spMatRowScal( int n, int *Ap, int *Ai, double *Ax, double *row );
-extern void spMatColScal( int n, int *Ap, int *Ai, double *Ax, double *col );
-extern int spMatBuildQMat( int qm, int qn, int *Qp, int *Qi, double *Qx,
-                           int am, int an, int *Ap, int *Ai, double *Ax,
+extern void spMatAxpy( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double a, double *x, double *y );
+extern void spMatATxpy( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double a, double *x, double *y );
+extern void spMatMaxRowAbs( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *row );
+extern void spMatMaxColAbs( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *col );
+extern void spMatRowScal( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *row );
+extern void spMatColScal( pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *col );
+extern int spMatBuildQMat( pot_int qm, pot_int qn, pot_int *Qp, pot_int *Qi, double *Qx,
+                           pot_int am, pot_int an, pot_int *Ap, pot_int *Ai, double *Ax,
                            double *b, double *c );
-extern int spMatRuizScal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, double *E, int maxIter );
-extern int spMatPCScal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, double *E, int maxIter );
-extern int spMatL2Scal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, double *E );
+extern int spMatRuizScal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E, pot_int maxIter );
+extern int spMatPCScal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E, pot_int maxIter );
+extern int spMatL2Scal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E );
 
 #endif /* vec_mat_h */
