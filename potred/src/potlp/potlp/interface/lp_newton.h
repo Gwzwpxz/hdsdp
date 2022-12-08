@@ -42,7 +42,7 @@ typedef struct {
 
 extern pot_int LpNewtonCreate( lp_newton **pnewton );
 extern pot_int LpNewtonInit( lp_newton *newton, pot_int nCol, pot_int nRow, pot_int *colMatBeg, pot_int *colMatIdx, double *colMatElem );
-extern pot_int LpNewtonOneStep( lp_newton *newton, double *lpObj, double *lpRHS, int *colMatBeg, int *colMatIdx, double *colMatElem,
+extern pot_int LpNewtonOneStep( lp_newton *newton, double *lpObj, double *lpRHS, pot_int *colMatBeg, pot_int *colMatIdx, double *colMatElem,
                                 double *colVal, double *rowDual, double *colDual, double *kappa, double *tau,
                                 double *pRes, double *dRes, double pObjVal, double dObjVal, double spxSize );
 extern void LpNewtonClear( lp_newton *newton );
