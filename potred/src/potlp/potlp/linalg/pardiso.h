@@ -30,7 +30,7 @@
 #include "pot_def.h"
 extern void pardisoinit ( void *, pot_int *, pot_int * );
 extern void pardiso     ( void     *, pot_int    *, pot_int *, pot_int *, pot_int *, pot_int *,
-                          double   *, pot_int    *, pot_int *, pot_int *, pot_int *, pot_int *,
+                          double   *, pot_int    *, pot_int *, pot_int *, pot_int *, int *,
                           pot_int *, double      *, double   *, pot_int * );
 #else
 extern void pardisoinit ( void *, int *, int * );

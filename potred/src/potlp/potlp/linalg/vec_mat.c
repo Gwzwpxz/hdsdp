@@ -268,10 +268,10 @@ extern pot_int psyev( pot_int n, double *U, double *d, double *Y,
     pot_int retcode = RETCODE_OK;
     
     char jobz = 'V', range = 'I', uplo = 'U';
-    int isuppz[4] = {0};
-    int il = n - 1, iu = n;
-    int m = 2;
-    int info = 0;
+    pot_int isuppz[4] = {0};
+    pot_int il = n - 1, iu = n;
+    pot_int m = 2;
+    pot_int info = 0;
     
     dsyevr(&jobz, &range, &uplo, &n, U, &n,
            &potDblConstantZero, &potDblConstantZero,
@@ -400,7 +400,7 @@ extern int spMatBuildQMat( pot_int qm, pot_int qn, pot_int *Qp, pot_int *Qi, dou
     pot_int *amaux = NULL;
     pot_int *anaux = NULL;
     
-    int nzA = Ap[an];
+    pot_int nzA = Ap[an];
     
     POTLP_INIT(amaux, pot_int, am + 1);
     POTLP_INIT(anaux, pot_int, an + 1);

@@ -5,7 +5,7 @@
 
 typedef struct {
     
-    int   nCol;
+    pot_int nCol;
     void *solver;
     
     int  backUpLin;

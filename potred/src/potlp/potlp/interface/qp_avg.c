@@ -92,7 +92,7 @@ static pot_int potQPISolve( pot_qpsolver *potQP, double pObjTarget ) {
     double pObjVal = POTLP_INFINITY;
     double pObjBest = pObjVal;
     
-    int iter, info;
+    pot_int iter, info;
     
 #ifdef POTQP_DEBUG
     POTQP_DEBUG("-------------------------------------"

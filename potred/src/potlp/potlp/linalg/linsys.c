@@ -6,13 +6,13 @@ typedef struct {
     
     pot_int    n; ///< Dimension of the linear system
     
-    int    *iWork; ///< Working array
+    pot_int *iWork; ///< Working array
     double *dWork; ///< Working array
-    int    *P; ///< Symbolic tree
+    pot_int    *P; ///< Symbolic tree
     
-    int    *Lnz;
-    int    *Lp; ///< CSC representation of L
-    int    *Li;
+    pot_int    *Lnz;
+    pot_int    *Lp; ///< CSC representation of L
+    pot_int    *Li;
     double *Lx;
     
 } qdldl_linsys;
