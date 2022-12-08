@@ -120,8 +120,11 @@ extern void potLanczosInitData( pot_lanczos *potLanczos, void *MMat, void (*lczM
     return;
 }
 
-#define LANCZOS_DEBUG(format, info) // printf(format, info)
-
+#ifdef LANCZOS_DEBUG
+#define LANCZOS_DEBUG(format, info) printf(format, info)
+#else
+#define LANCZOS_DEBUG(format, info)
+#endif
 /** @brief
  * Implement an abstract Lanczos method to find the negative curvature of the Hessian
  */

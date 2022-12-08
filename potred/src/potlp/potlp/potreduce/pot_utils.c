@@ -43,6 +43,8 @@ extern void potUtilGetDefaultParams( double dblParams[NUM_DBL_PARAM], int intPar
     intParams[INT_PARAM_QPWINDOW] = 32;
     /* Number of iterations to do a recording */
     intParams[INT_PARAM_RECORDFREQ] = 10;
+    /* Number of barrier iterations */
+    intParams[INT_PARAM_MAXBARITER] = 100;
     
     /* Internal parameters */
     dblParams[DBL_IPARAM_RESTARTRATE] = 20.0;
@@ -64,6 +66,7 @@ extern void potUtilPrintParams( double dblParams[NUM_DBL_PARAM], int intParams[N
     printf("ScalSpx     is set to %d \n", intParams[INT_PARAM_SCALSIMPLEX]);
     printf("QPWindow    is set to %d \n", intParams[INT_PARAM_QPWINDOW]);
     printf("RecordFreq  is set to %d \n", intParams[INT_PARAM_RECORDFREQ]);
+    printf("MaxBarIter  is set to %d \n", intParams[INT_PARAM_MAXBARITER]);
     printf("RelFeasTol  is set to %3.3e \n", dblParams[DBL_PARAM_RELFEASTOL]);
     printf("RelOptTol   is set to %3.3e \n", dblParams[DBL_PARAM_RELOPTTOL]);
     printf("TimeLimit   is set to %.0fs \n", dblParams[DBL_PARAM_TIMELIMIT]);

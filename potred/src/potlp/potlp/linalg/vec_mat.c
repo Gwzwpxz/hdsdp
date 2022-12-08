@@ -515,7 +515,12 @@ exit_cleanup:
     return retcode;
 }
 
-#define RUIZ_DEBUG(format, info) // printf(format, info);
+#ifdef RUIZ_DEBUG
+#undef RUIZ_DEBUG
+#define RUIZ_DEBUG(format, info) printf(format, info);
+#else
+#define RUIZ_DEBUG(format, info)
+#endif
 extern int spMatRuizScal( pot_int m, pot_int n, pot_int *Ap, pot_int *Ai, double *Ax, double *D, double *E, int maxIter ) {
     
     pot_int retcode = RETCODE_OK;

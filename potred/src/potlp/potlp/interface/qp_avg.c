@@ -57,7 +57,8 @@ static double potQPIRatioTest( pot_int nQPRow, double *s, double *ds, double *lb
     return fabs(1.0 / stepTemp);
 }
 
-#ifndef POTQP_DEBUG
+#ifdef POTQP_DEBUG
+#undef POTQP_DEBUG
 #define POTQP_DEBUG printf
 #endif
 /* Solve QP problem using infeasible start primal-dual interior point method */

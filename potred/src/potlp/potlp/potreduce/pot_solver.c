@@ -181,8 +181,13 @@ static double potReductionPotLineSearch( pot_fx *objFunc, double rhoVal, double 
     return potVal;
 }
 
+#ifdef POTLP_DEBUG
+#undef POTLP_DEBUG
+#define POTLP_DEBUG printf
+#else
+#define POTLP_DEBUG
+#endif
 #define CONIC_STATS(ConeMin) printf("Conic Minimum %10.5e. \n", ConeMin);
-#define POTLP_DEBUG(x) // printf
 static pot_int potReductionOneStep( pot_solver *pot ) {
     
     pot_int retcode = RETCODE_OK;
@@ -380,6 +385,10 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
         pot->allowCurvature ) {
         pot->useCurvature = 1;
     }
+    
+    
+    POTLP_DEBUG("F: %10.3e Alpha: [%6.1e, %6.1e] Beta [%3.3f] PotRed [%3.3f] \n",
+                pot->fVal, alphaStep[0], alphaStep[1], pot->betaRadius, potReduce);
     
 exit_cleanup:
     

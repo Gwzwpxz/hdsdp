@@ -41,7 +41,12 @@ static void POT_FNAME(potLpResidualScal) ( potlp_solver *potlp ) {
     return;
 }
 
-#define REWEIGHT_DEBUG(s, p, d, c) // printf("%s: pInf = %3.3f dInf = %3.3f Gap = %3.3f \n", s, p, d, c)
+#ifdef REWEIGHT_DEBUG
+#undef REWEIGHT_DEBUG
+#define REWEIGHT_DEBUG(s, p, d, c) printf("%s: pInf = %3.3f dInf = %3.3f Gap = %3.3f \n", s, p, d, c)
+#else
+#define REWEIGHT_DEBUG(s, p, d, c)
+#endif
 static void POT_FNAME(potLpReWeight) ( potlp_solver *potlp ) {
     
 
@@ -53,9 +58,9 @@ static void POT_FNAME(potLpReWeight) ( potlp_solver *potlp ) {
     double dOmega = potlp->dResOmega;
     double cOmega = potlp->cplResOmega;
     
-    double pInfeas = potlp->pInfeasRel;
-    double dInfeas = potlp->dInfeasRel;
-    double cInfeas = potlp->complGapRel;
+    double pInfeas = potlp->pInfeas;
+    double dInfeas = potlp->dInfeas;
+    double cInfeas = potlp->complGap;
     
     REWEIGHT_DEBUG("Before", pOmega, dOmega, cOmega);
     
@@ -88,9 +93,9 @@ static void POT_FNAME(potLpReWeight) ( potlp_solver *potlp ) {
         double minOmega = POTLP_MIN(pOmega, dOmega);
         minOmega = POTLP_MIN(minOmega, cOmega);
 
-        pOmega = pOmega / minOmega;
-        dOmega = dOmega / minOmega;
-        cOmega = cOmega / minOmega;
+//        pOmega = pOmega / minOmega;
+//        dOmega = dOmega / minOmega;
+//        cOmega = cOmega / minOmega;
         
 //        double maxOmega = POTLP_MAX(pOmega, dOmega);
 //        maxOmega = POTLP_MAX(maxOmega, cOmega);
@@ -290,6 +295,8 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
     
     int logFreq = 0;
     int useIPM = potlp->useIPM;
+    int nBarIter = potlp->nBarIter;
+    int maxBarIter = potlp->intParams[INT_PARAM_MAXBARITER];
     
     if ( potlp->nIter < 1000 ) {
         logFreq = 50;
@@ -316,7 +323,7 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
         isCtrlC = 0; /* Reset the ctrl c status */
     }
     
-    if ( potlp->nIter % logFreq == 0 || potlp->nIter == 1 || intInfo || useIPM ) {
+    if ( potlp->nIter % logFreq == 0 || potlp->nIter == 1 || intInfo || (useIPM && nBarIter < maxBarIter)) {
         
         POT_FNAME(LPSolverIRetrieveSolution)(potlp);
         
@@ -403,15 +410,15 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
                    elapsedTime / 3600.0 );
         }
         
-#ifndef DLINSYSDUMMY
-        if ( ((relGap < 5 * relOptTol || minGap < 5 * relOptTol ) && pInfeas < 5 * relFeasTol && dInfeas < 5 * relFeasTol) && !useIPM && !intInfo ) {
+#ifndef LINSYSDUMMY
+        if ( ((relGap < 5 * relOptTol || minGap < 5 * relOptTol ) && pInfeas < 5 * relFeasTol && dInfeas < 5 * relFeasTol) && !useIPM && maxBarIter && !intInfo ) {
             printf("Approaching optimality. Using an interior point step to cleanup. \n");
             potlp->useIPM = 1;
         }
 #endif
         
         /* Interior point solver */
-        if ( useIPM && !intInfo ) {
+        if ( useIPM && nBarIter < maxBarIter && !intInfo ) {
             potlp->nBarIter += 1;
             int icode = POT_FNAME(potLpNewtonStep)(potlp);
             if ( icode != RETCODE_OK ) {
@@ -499,9 +506,9 @@ static void POT_FNAME(LPSolverIObjScale)( potlp_solver *potlp ) {
     
     double bcRatio = rhsOneNorm / objOneNorm;
     
-    if ( potlp->lpObjNorm > 1e+08 || potlp->lpRHSNorm > 1e+08 || bcRatio < 1e-03 || bcRatio > 1e+03 ) {
-        potlp->intParams[INT_PARAM_COEFSCALE] = 1;
-    }
+//    if ( potlp->lpObjNorm > 1e+08 || potlp->lpRHSNorm > 1e+08 || bcRatio < 1e-03 || bcRatio > 1e+03 ) {
+//        potlp->intParams[INT_PARAM_COEFSCALE] = 1;
+//    }
     
     if ( potlp->intParams[INT_PARAM_COEFSCALE] ) {
 #if 1
@@ -966,7 +973,6 @@ extern pot_int POT_FNAME(LPSolverSetData)( potlp_solver *potlp, pot_int *Ap, pot
     qpWindow |= qpWindow >> 8;
     qpWindow |= qpWindow >> 16;
     qpWindow += 1;
-    qpWindow = qpWindow / 2;
     
     potlp->nHistoryIts = qpWindow;
     POT_CALL(potQPInit(potlp->qp, qpWindow, 2 * nCol + nRow + 2, 2 * nCol + 2));

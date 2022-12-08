@@ -10,13 +10,13 @@ typedef struct {
     
     int  backUpLin;
     
-    int  (*LCreate)  ( void **, int );
+    pot_int  (*LCreate)  ( void **, pot_int );
     void (*LDestroy) ( void ** );
     
-    int  (*LSFac)  ( void *, int *, int * );
-    int  (*LNFac)  ( void *, int *, int *, double * );
-    int  (*LNFacBackup)  ( void *, int *, int *, double * );
-    int  (*LSolve) ( void *, double * );
+    pot_int  (*LSFac)  ( void *, pot_int *, pot_int * );
+    pot_int  (*LNFac)  ( void *, pot_int *, pot_int *, double * );
+    pot_int  (*LNFacBackup)  ( void *, pot_int *, pot_int *, double * );
+    pot_int  (*LSolve) ( void *, double * );
 
 } pot_linsys;
 

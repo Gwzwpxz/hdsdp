@@ -66,6 +66,7 @@ typedef int pot_int;
 #define INT_PARAM_SCALSIMPLEX   8
 #define INT_PARAM_QPWINDOW      9
 #define INT_PARAM_RECORDFREQ   10
+#define INT_PARAM_MAXBARITER   11
 
 // Double Parameters
 #define DBL_PARAM_RELFEASTOL    0
