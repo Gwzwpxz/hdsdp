@@ -1,17 +1,16 @@
 clear; clc; close all;
-m = 1000;
-n = 10000;
 
-A = rand(m, n);
-k = 64;
-nc = 90;
+load('ads.mat');
+AX = data.AX;
+X = data.X;
 
-X = randn(n, k);
-AX = A * X;
-alpha = adsqp(AX, X(n - nc + 1:end, :));
+k = 16;
+nc = 58;
+
+alpha = adsqp(AX, X(19:end, :));
 
 model.Q = 0.5 * sparse(AX' * AX);
-model.A = [X(n - nc + 1:end, :);
+model.A = [X(19:end, :);
            ones(1, k)];
 model.A = sparse(model.A);
 model.rhs = zeros(nc + 1, 1);

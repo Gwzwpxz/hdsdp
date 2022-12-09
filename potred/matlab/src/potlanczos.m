@@ -1,4 +1,4 @@
-function [zfin, lam, delta] = potlanczos(x, coneidx, rho, g, f, ATA, AT, A, scale, vstart)
+function [zfin, lam, delta] = potlanczos(x, coneidx, rho, g, f, ATA, AT, A, scale, xorig, vstart)
 % Compute minimum eigen-value using Lanczos iteration for projected Hessian
 % matrix
 %
@@ -6,13 +6,21 @@ function [zfin, lam, delta] = potlanczos(x, coneidx, rho, g, f, ATA, AT, A, scal
 %
 % The matrix-vector multiplication is specially processed
 
-if nargin < 10
+if nargin < 11
     vstart = [];
 end % End if
 
 rng(24);
-n = size(AT, 1);
-maxiter = 1000;
+[~, n] = size(A);
+maxiter = 150;
+
+ncone = length(coneidx);
+nmin = ceil(0.1 * ncone);
+[~, xspmin] = mink(xorig(coneidx), nmin);
+xspsmall = find(xorig(coneidx) < min(f, 1e-03));
+xsp = union(xspmin, xspsmall);
+xsp = xsp + n - length(coneidx);
+% find(x(coneidx) < 1e-02) + n - length(coneidx);
 
 if isempty(vstart)
 if scale
@@ -33,24 +41,10 @@ H = zeros(maxiter + 1, maxiter);
 v = v / norm(v);
 V(:, 1) = v;
 tol = 1e-06;
-ncone = length(coneidx);
-useold = false;
 
 for k = 1:maxiter
     
-    %     fprintf("%f \n", v' * Hproj * v);
-    % w = P * z
-    if useold
-        w = v;
-        w(coneidx) = w(coneidx) - sum(w(coneidx)) / ncone;
-        w1 = (- (g' * w) / f) * g;
-        w2 = AT * (A * w); % Or w2 = ATA * w;
-        w3 = (f / rho) * (d .* w);
-        w = - w1 - w2 - w3;
-        w(coneidx) = w(coneidx) - sum(w(coneidx)) / ncone;
-    else
-        w = -MXv(v, coneidx, AT, A, ATA, x, f, g, rho, scale);
-    end % End if
+    w = -MXv(v, coneidx, AT, A, ATA, x, f, g, rho, scale, xsp);
     
     wold = w;
     
@@ -86,33 +80,11 @@ for k = 1:maxiter
             lam2 = eigH(idx(k-1));
             z = V(:, 1:k) * Y(:, idx(k));
             z2 = V(:, 1:k) * Y(:, idx(k - 1));
-            
-            if useold
-                zz = z;
-                zz(coneidx) = zz(coneidx) - sum(zz(coneidx)) / ncone;
-                zz1 = (- (g' * zz) / f) * g;
-                zz2 = AT * (A * zz);
-                zz3 = (f / rho) * (d .* zz);
-                zz = - zz1 - zz2 - zz3;
-                zz(coneidx) = zz(coneidx) - sum(zz(coneidx)) / ncone;
-            else
-                zz = -MXv(z, coneidx, AT, A, ATA, x, f, g, rho, scale);
-            end % End if
+            zz = -MXv(z, coneidx, AT, A, ATA, x, f, g, rho, scale, xsp);
             
             res = norm(zz - lam * z);
             zfin = zz;
-            
-            if useold
-                zz = z2;
-                zz(coneidx) = zz(coneidx) - sum(zz(coneidx)) / ncone;
-                zz1 = (- (g' * zz) / f) * g;
-                zz2 = AT * (A * zz);
-                zz3 = (f / rho) * (d .* zz);
-                zz = - zz1 - zz2 - zz3;
-                zz(coneidx) = zz(coneidx) - sum(zz(coneidx)) / ncone;
-            else
-                zz = -MXv(z2, coneidx, AT, A, ATA, x, f, g, rho, scale);
-            end % End if
+            zz = -MXv(z2, coneidx, AT, A, ATA, x, f, g, rho, scale, xsp);
             
             res2 = norm(zz - lam * z2);
             tmp = lam - lam2 - res2;
@@ -133,5 +105,6 @@ for k = 1:maxiter
         end % End if
     end % End if
 end % End if
+
 
 end % End function

@@ -24,8 +24,8 @@ param.coefScal = 1;
 param.curvature = 1000;
 param.curvInterval = 500;
 param.RScalFreq = 5;
-param.PI_RestartMax = 100;
-param.PI_RestartRate = 1.0;
+param.PI_RestartMax = 10;
+param.PI_RestartRate = 1.5;
 param.maxTime = 600.0;
 param.maxIter = 1000000;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -36,10 +36,10 @@ end % End if
 
 diary off;
 
-log_path = "log_20221207_1";
+log_path = "log_20221208_1";
 mkdir(log_path);
 
-fileID = fopen('1207_1.txt', 'w');
+fileID = fopen('1208_1.txt', 'w');
 
 fieldnames = fieldnames(param);
 nfields = length(fieldnames);
@@ -57,6 +57,11 @@ for i = 1:nfiles
     
     n = fnames{i};
     dname = fullfile(log_path, n(3:end-4) + ".txt");
+    
+    if exist(dname, 'file')
+        continue;
+    end % End if
+    
     diary(dname);
     diary on
     try 

@@ -1,8 +1,10 @@
-function [mxv] = MXv(v, coneidx, AT, A, ATA, x, f, g, rho, scale)
+function [mxv] = MXv(v, coneidx, AT, A, ATA, x, f, g, rho, scale, xsp)
 % Compute the Hessian-vector product for negative curvature computation
 
 n = length(v);
 ncone = length(coneidx);
+
+v(xsp) = 0;
 
 if scale
     nrm = norm(x(coneidx));
@@ -36,5 +38,7 @@ else
     u3(coneidx) = u3(coneidx) - sum(u3(coneidx)) / ncone;
     mxv = f^2 * u1 + rho * f * u2 - rho * u3;
 end % End if
+
+mxv(xsp) = 0;
 
 end % End function

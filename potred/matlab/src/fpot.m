@@ -1,7 +1,8 @@
-function [fval, grad] = fpot(A, ATA, x)
+function [fval, grad, resi] = fpot(A, ATA, x)
 
 grad = ATA * x;
-nrm = norm(A * x);
+resi = A * x;
+nrm = norm(resi);
 fval = 0.5 * nrm^2;
 
 end % End function

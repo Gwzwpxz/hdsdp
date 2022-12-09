@@ -1,4 +1,4 @@
-function [v, vbef] = findnegacurv(x, m, coneidx, projidx, rho, g, f, ATA, AT, A, vstart, method)
+function [v, vbef] = findnegacurv(x, m, coneidx, projidx, rho, g, f, ATA, AT, A, vstart, method, xorig)
 % Find negative curvature of the Hessian matrix
 % Hess =  rho * (- (g * g') / f + ATA) + diag(f * d)
 % over the subspace e' * v = 0
@@ -27,8 +27,25 @@ Aid = [(1:m)'; m + bid];
 % if length(subcone) ~= ncone
 %     keyboard;
 % end % End if
-
-if method == "direct"
+if method == "truncate"
+    Hess = (- (g * g') / f + ATA);
+    H11 = Hess(1:m, 1:m); H12 = Hess(1:m, m+1:end);
+    H22 = Hess(m + 1:end, m+1:end);
+    PH12 = H12 - (H12 * e) * e' / nproj;
+    HeeT = (H22 * e) * e' / nproj;
+    PH22P = H22 - HeeT - HeeT' + sum(sum(H22)) / nproj^2;
+    Hproj = [H11,   PH12;
+             PH12', PH22P'];
+    [V, evals] = eig(Hproj + Hproj', 'vector');
+    [~, id] = min(evals);
+    v = real(V(:, id));
+    vbef = [];
+    
+    d(coneidx) = x(coneidx).^-2;
+    Hreal = Hess + diag(d * f / rho);
+    [~, xid] = mink(x(coneidx), ceil(length(coneidx) / 15));
+    
+elseif method == "direct"
     d = zeros(n, 1);
     d(coneidx) = x(coneidx).^-2;
     Hess = (- (g * g') / f + ATA) + diag(d * f / rho);
@@ -66,17 +83,33 @@ elseif method == "sdirect"
 elseif method == "lanczos"
     xsub = x(Aid);
     [v, lam, delta] = potlanczos(xsub, subcone, rho, g(Aid), f, ATA,...
-                                 AT(Aid, :), A(:, Aid), false);
+    AT(Aid, :), A(:, Aid), false, xorig);
     vbef = [];
 elseif method == "scaled"
     xsub = x(Aid); 
     [v, lam, delta] = potlanczos(xsub, subcone, rho, g(Aid), f, ATA,...
-                                 AT(Aid, :), A(:, Aid), true, vstart);
+                                 AT(Aid, :), A(:, Aid), true, xorig, vstart);
     vbef = v;
     vbef = vbef / norm(vbef);
     v(subcone) = v(subcone) .* xsub(subcone);
 else
     error("Not implemented");
+end % End if
+
+if 0
+    d = zeros(n, 1);
+    d(coneidx) = x(coneidx).^-2;
+    Hess = (- (g * g') / f + ATA) + diag(d * f / rho);
+    H11 = Hess(1:m, 1:m); H12 = Hess(1:m, m+1:end);
+    H22 = Hess(m + 1:end, m+1:end);
+    PH12 = H12 - (H12 * e) * e' / nproj;
+    HeeT = (H22 * e) * e' / nproj;
+    PH22P = H22 - HeeT - HeeT' + sum(sum(H22)) / nproj^2;
+    Hproj = [H11,   PH12;
+        PH12', PH22P'];
+    v = v / norm(v);
+    fprintf("CurveVal %f \n",  v' * Hproj * v);
+    keyboard;
 end % End if
 
 vcone = zeros(ncone, 1);

@@ -2,7 +2,7 @@ clear;
 % clc;
 % close all;
 
-fname = fullfile('./data', 'p_afiro.mps');
+fname = fullfile('./data', 'p_blend.mps');
 
 data = preprocess(fname);
 
@@ -34,21 +34,20 @@ HSDAA = [sparse(m, m), A, sparse(m, n), sparse(m, 1), -b;
          -A',         sparse(n, n),  -speye(n), sparse(n, 1), c;
          b',          -c',  sparse(1, n), -1, 0];
      
+% HSDAA = [sparse(m, m), A, sparse(m, n), -b;
+%          -A',         sparse(n, n),  -speye(n), c;
+%          b',          -c',  sparse(1, n), 0];
+     
 % HSDAA = HSDAA' * inv(HSDAA * HSDAA') * HSDAA; 
 [D, E, HSDA] = ruizscale(HSDAA, 100);
 % [D2, E2, HSDA] = pcscale(HSDA, 10);
 % D = D .* D2;
 % E = E .* E2;
-% HSDA(end, :) = HSDA(end, :) * 100;
+% HSDA(end, :) = HSDA(end, :) * 10;
 % lpsol = potreduceLp(HSDA, m, 5000, false, linesearch, neweigs, 1);
-yProj = A;
-sidx = m + n + 1 : m + n + n;
-ridx = m + 1 : m + n;
-pc = HSDA(ridx, end);
-lpsol = potRecur(HSDA, m, 5000, yProj, pc, sidx, ridx, HSDA);
+lpsol = potRecur(HSDA, m, 5000, m, n, A, b, c, E);
 sol = lpsol .* E;
 
-kappa = sol(end - 1);
 tau = sol(end);
 y = sol(1:m);
 y = y / tau;
