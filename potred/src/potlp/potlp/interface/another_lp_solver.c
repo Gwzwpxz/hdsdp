@@ -188,20 +188,8 @@ static void POT_FNAME(potLpConstrMatImplPrepareX)( void *AMatData, pot_vec *xIni
 
 static void POT_FNAME(potLpConstrMatImplProject)( void *AMatData, pot_vec *xVec ) {
     
-    potlp_solver *potlp = (potlp_solver *) AMatData;
-    
-    if ( potlp->isColBasic ) {
-        double eTx = 0.0;
-        for ( int i = xVec->n - xVec->ncone; i < xVec->n; ++i ) {
-            if ( potlp->isColBasic[i] ) {
-                eTx += xVec->x[i];
-            }
-        }
-        
-    } else {
-        double eTx = potVecSumCone(xVec);
-        potVecConeAddConstant(xVec, -eTx / xVec->ncone);
-    }
+    double eTx = potVecSumCone(xVec);
+    potVecConeAddConstant(xVec, -eTx / xVec->ncone);
     
     return;
 }
@@ -221,7 +209,7 @@ static void POT_FNAME(potLpConstrMatImplMonitor)( void *AMatData, void *info ) {
 
 static void POT_FNAME(potLpObjFISetupRes)( potlp_solver *potlp, pot_vec *xVec ) {
     
-    LPQMatMultiply(potlp->potQMatrix, potlp->isColBasic, xVec->x, potlp->pdcRes);
+    LPQMatMultiply(potlp->potQMatrix, xVec->x, potlp->pdcRes);
     POT_FNAME(potLpResidualScal)(potlp);
     
     return;
@@ -230,17 +218,17 @@ static void POT_FNAME(potLpObjFISetupRes)( potlp_solver *potlp, pot_vec *xVec ) 
 static void POT_FNAME(potLpObjFISetupGrad)( potlp_solver *potlp, pot_vec *gVec ) {
     
     POT_FNAME(potLpResidualScal)(potlp);
-    LPQMatTransMultiply(potlp->potQMatrix, potlp->isColBasic, potlp->pdcRes, gVec->x);
+    LPQMatTransMultiply(potlp->potQMatrix, potlp->pdcRes, gVec->x);
     
     return;
 }
 
 static void POT_FNAME(potLpObjFISetupHVec)( potlp_solver *potlp, pot_vec *xVec, pot_vec *fHvec ) {
     
-    LPQMatMultiply(potlp->potQMatrix, potlp->isColBasic, xVec->x, potlp->pdcRes);
+    LPQMatMultiply(potlp->potQMatrix, xVec->x, potlp->pdcRes);
     POT_FNAME(potLpResidualScal)(potlp);
     POT_FNAME(potLpResidualScal)(potlp);
-    LPQMatTransMultiply(potlp->potQMatrix, potlp->isColBasic, potlp->pdcRes, fHvec->x);
+    LPQMatTransMultiply(potlp->potQMatrix, potlp->pdcRes, fHvec->x);
     
     return;
 }
@@ -671,19 +659,7 @@ static void POT_FNAME(LPSolverIParamAdjust)( potlp_solver *potlp ) {
 }
 
 static void POT_FNAME(LPSolverIHeurInitialize)( potlp_solver *potlp ) {
-    
-    pot_int nColQ = potlp->potQMatrix->nColQ;
-    int *isColBasic = potlp->isColBasic;
-    
-    /* Initialize basis status */
-    if ( isColBasic ) {
-        for ( int i = 0; i < nColQ; ++i ) {
-            isColBasic[i] = 1;
-        }
-    }
-    
-    potlp->nColBasic = nColQ;
-    
+        
     /* Initialize residual weight */
     potlp->pResOmega = 1.0;
     potlp->dResOmega = 1.0;
@@ -934,7 +910,6 @@ extern pot_int POT_FNAME(LPSolverSetData)( potlp_solver *potlp, pot_int *Ap, pot
     POTLP_INIT(potlp->rowDual, double, nRow);
     
     POTLP_INIT(potlp->scalVals, double, 2 * nCol + nRow + 2);
-    // POTLP_INIT(potlp->isColBasic, int, 2 * nCol + nRow + 2);
     
     if ( !potlp->colMatBeg || !potlp->colMatIdx || !potlp->colMatElem ||
          !potlp->lpObj || !potlp->lpRHS || !potlp->pdcRes ||
@@ -1049,10 +1024,6 @@ extern void POT_FNAME(LPSolverClear)( potlp_solver *potlp ) {
     POTLP_FREE(potlp->rowDual);
     
     POTLP_FREE(potlp->scalVals);
-    
-    if ( potlp->isColBasic ) {
-        POTLP_FREE(potlp->isColBasic);
-    }
     
     potConstrMatDestroy(&potlp->potConstrMat);
     potObjFDestroy(&potlp->potObjF);

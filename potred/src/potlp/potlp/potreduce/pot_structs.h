@@ -118,6 +118,7 @@ typedef struct {
     double  rhoVal;
     double  potVal;
     double  betaRadius;
+    double  potRedAvg;
     
     double  projHessMat[4];
     double  projGMat[4];

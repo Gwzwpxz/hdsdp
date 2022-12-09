@@ -131,70 +131,36 @@ extern pot_int LPQMatL2Scal( lp_qmatrix *QMat ) {
 
 /** @brief Q matrix multiplication Q x
  *
- *The internal isColBasic allows skipping some of the columns that are considered nonbasic
- *
  * @param[in]  QMat The Q Matrix
- * @param[in]  isColBasic Basis status of the columns
  * @param[in]  xVal x in Qx
  * @param[out] qxVal Qx. Overwritten on exit
  */
-extern void LPQMatMultiply( lp_qmatrix *QMat, int *isColBasic, double *xVal, double *qxVal ) {
+extern void LPQMatMultiply( lp_qmatrix *QMat, double *xVal, double *qxVal ) {
     
     pot_int *QMatBeg = QMat->QMatBeg;
     pot_int *QMatIdx = QMat->QMatIdx;
     double  *QMatElem = QMat->QMatElem;
     
     POTLP_ZERO(qxVal, double, QMat->nRowQ);
-    
-    if ( isColBasic ) {
-
-        for ( int i = 0, j; i < QMat->nColQ; ++i ) {
-            if ( !isColBasic[i] ) {
-                continue;
-            }
-            
-            for ( j = QMatBeg[i]; j < QMatBeg[i + 1]; ++j ) {
-                qxVal[QMatIdx[j]] += QMatElem[j] * xVal[i];
-            }
-        }
-        
-    } else {
-        spMatAxpy(QMat->nColQ, QMatBeg, QMatIdx, QMatElem, 1.0, xVal, qxVal);
-    }
+    spMatAxpy(QMat->nColQ, QMatBeg, QMatIdx, QMatElem, 1.0, xVal, qxVal);
     
     return;
 }
 
 /** @brief Q matrix transpose multiplication Q'  y
  *
- *The internal isColBasic allows skipping some of the columns that are considered nonbasic
- *
  * @param[in]  QMat The Q Matrix
- * @param[in]  isColBasic Basis status of the columns
  * @param[in]  yVal y in Q' y
  * @param[out] qtyVal Q' y. Overwritten on exit
  */
-extern void LPQMatTransMultiply( lp_qmatrix *QMat, int *isColBasic, double *yVal, double *qtyVal ) {
+extern void LPQMatTransMultiply( lp_qmatrix *QMat, double *yVal, double *qtyVal ) {
     
     pot_int *QMatBeg = QMat->QMatBeg;
     pot_int *QMatIdx = QMat->QMatIdx;
     double  *QMatElem = QMat->QMatElem;
     
     POTLP_ZERO(qtyVal, double, QMat->nColQ);
-    
-    if ( isColBasic ) {
-        for ( int i = 0, j; i < QMat->nColQ; ++i ) {
-            double qty = 0.0;
-            if ( isColBasic[i] ) {
-                for ( j = QMatBeg[i]; j < QMatBeg[i + 1]; ++j ) {
-                    qty += QMatElem[j] * yVal[QMatIdx[j]];
-                }
-            }
-            qtyVal[i] = qty;
-        }
-    } else {
-        spMatATxpy(QMat->nColQ, QMatBeg, QMatIdx, QMatElem, 1.0, yVal, qtyVal);
-    }
+    spMatATxpy(QMat->nColQ, QMatBeg, QMatIdx, QMatElem, 1.0, yVal, qtyVal);
     
     return;
 }

@@ -185,7 +185,7 @@ static double potReductionPotLineSearch( pot_fx *objFunc, double rhoVal, double 
 #undef POTLP_DEBUG
 #define POTLP_DEBUG printf
 #else
-#define POTLP_DEBUG
+#define POTLP_DEBUG(...)
 #endif
 #define CONIC_STATS(ConeMin) printf("Conic Minimum %10.5e. \n", ConeMin);
 static pot_int potReductionOneStep( pot_solver *pot ) {
@@ -331,7 +331,7 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
         double potValTmp = potReductionComputePotValue(rhoVal, fValTmp, zVal, auxVec1);
         double potLineVal = POTLP_INFINITY;
         
-        if ( pot->curvInterval < 10 && (1) ) {
+        if ( pot->curvInterval < 10 && (0) ) {
             potLineVal = potReductionPotLineSearch(objFunc, rhoVal, zVal, xPres,
                                                    dXStep, auxVec2, potValTmp, 0.0);
         }
@@ -363,14 +363,18 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
         }
     }
     
-    double potReduceEps = -1e-03; // * pot->n;
-    
-    if ( (potReduce > 0.01 * potReduceEps && pot->useCurvature) || lczCode != RETCODE_OK ) {
-        pot->allowCurvature = 0;
+    if ( potVal != POTLP_INFINITY ) {
+        pot->potRedAvg = ( potVal == POTLP_INFINITY ) ? potReduce : potReduce * 0.8 + pot->potRedAvg * 0.2;
+    }
+        
+    if ( (potReduce > 0.1 * pot->potRedAvg && pot->useCurvature) || lczCode != RETCODE_OK ) {
         if ( lczCode != RETCODE_OK ) {
+            pot->allowCurvature = 0;
             printf("Curvature is shut down due to failed Lanczos \n");
         } else {
-            printf("Curvature is shut down due to insufficient descent \n");
+            pot->curvMinInterval = POTLP_MAX(pot->curvMinInterval * 10, 2000);
+            pot->curvMinInterval = POTLP_MIN(pot->curvMinInterval, 10000);
+//            printf("Curvature is shut down due to insufficient descent \n");
         }
     }
     
@@ -381,7 +385,7 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
     
     pot->useCurvature = 0;
         
-    if ( potReduce > potReduceEps && pot->curvInterval >= pot->curvMinInterval &&
+    if ( potReduce > pot->potRedAvg && pot->curvInterval >= pot->curvMinInterval &&
         pot->allowCurvature ) {
         pot->useCurvature = 1;
     }
@@ -607,8 +611,8 @@ extern pot_int potLPInit( pot_solver *pot, pot_int vDim, pot_int vConeDim ) {
     /* Potential value is slightly larger */
     pot->rhoVal = 1.1 * (vConeDim + sqrt(vConeDim));
     POT_CALL(potLanczosInit(pot->lczTool, vDim, vConeDim));
-    potLanczosInitData(pot->lczTool, pot, potLPPotentialScaledHVec);
-    // potLanczosInitData(pot->lczTool, pot, potLPPotentialHVec);
+//    potLanczosInitData(pot->lczTool, pot, potLPPotentialScaledHVec);
+     potLanczosInitData(pot->lczTool, pot, potLPPotentialHVec);
     
 #ifdef POT_DEBUG
     POTLP_INIT(pot->HessMat, double, vDim * vDim);
