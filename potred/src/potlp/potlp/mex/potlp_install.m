@@ -1,8 +1,8 @@
 clear; clc;
 
 src_linsys = ["linsys.c"; "qdldl.c"; "vec_mat.c"];
-src_pot = ["pot_constr_mat.c"; "pot_lanczos.c"; "pot_objfunc.c"; 
-                 "pot_solver.c"; "pot_utils.c"; "pot_vector.c"];
+src_pot = ["pot_constr_mat.c"; "pot_lanczos.c"; "pot_objfunc.c"; "cone_filter.c";...
+                 "pot_solver.c"; "pot_utils.c"; "pot_vector.c" ];
 src_interface = ["another_lp_solver.c";  "lp_newton.c"; "lp_qmatrix.c"; "qp_avg.c"];
 
 src_linsys = strjoin(fullfile('..', 'linalg', src_linsys));
