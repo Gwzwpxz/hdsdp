@@ -12,13 +12,16 @@
 
 #define error_traceback(info)                                               \
 if ( retcode != RETCODE_OK ) {                                              \
-    printf("Error:File:%s -> Line:%d -> %s \n", __FILE__, __LINE__, info); \
+    printf("Error: File:%s -> Line:%d -> %s \n", __FILE__, __LINE__, info);  \
 }
 
 extern double potUtilGetTimeStamp( void );
 extern void potUtilGetDefaultParams( double dblParams[NUM_DBL_PARAM], int intParams[NUM_INT_PARAM] );
 extern void potUtilPrintParams( double dblParams[NUM_DBL_PARAM], int intParams[NUM_INT_PARAM] );
 extern void potUtilPrintIParams( double dblParams[NUM_DBL_PARAM], int intParams[NUM_INT_PARAM] );
+
+/* Sorting */
+extern void potUtilSortbyDbl( int *ind, double *val, int low, int high );
 
 /* Debugging */
 extern void potUtilPrintDblContent( int n, double *d );

@@ -93,6 +93,7 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
     
     double relFeasTol = 1e-04;
     double relOptTol = 1e-04;
+    double barStartTol = 1e-03;
     double maxTime = 600.0;
     
     int iParamRestartRate = 18;
@@ -141,6 +142,9 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
         param = mxGetField(params, 0, "relOptTol");
         if ( param ) { relOptTol = (double) (*mxGetPr(param)); }
         
+        param = mxGetField(params, 0, "barStartTol");
+        if ( param ) { barStartTol = (double) (*mxGetPr(param)); }
+        
         param = mxGetField(params, 0, "maxTime");
         if ( param ) { maxTime = (double) (*mxGetPr(param)); }
         
@@ -171,6 +175,7 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
     potlp->dblParams[DBL_PARAM_RELFEASTOL] = relFeasTol;
     potlp->dblParams[DBL_PARAM_RELOPTTOL] = relOptTol;
     potlp->dblParams[DBL_PARAM_TIMELIMIT] = maxTime;
+    potlp->dblParams[DBL_PARAM_BARSTARTTOL] = barStartTol;
     
     /* Internal Parameters */
     potlp->dblParams[iParamRestartRate] = ParamRestartRate;

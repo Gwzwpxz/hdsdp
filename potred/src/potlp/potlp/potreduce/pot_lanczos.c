@@ -25,10 +25,12 @@ static void dArrSymmetrize( pot_int n, double *dArray ) {
 static void potLanczosIInitV( pot_vec *vVec ) {
     
     srand(vVec->ncone);
-    for ( int i = 0; i < vVec->x[i]; ++i ) {
+    for ( int i = 0; i < vVec->n; ++i ) {
         srand(rand());
         vVec->x[i] = sqrt(sqrt((rand() % 1627))) * (rand() % 2 - 0.5);
     }
+    
+    vVec->nrm = -1;
     
     return;
 }
@@ -61,6 +63,7 @@ extern pot_int potLanczosInit( pot_lanczos *potLanczos, pot_int nCols, pot_int n
     
     pot_int retcode = RETCODE_OK;
     potLanczos->n = nCols;
+    potLanczos->nCone = nCones;
     
     if ( potLanczos->vVec   || potLanczos->wVec     || potLanczos->z1Vec ||
          potLanczos->z2Vec  || potLanczos->vaVec    || potLanczos->VMat  ||
@@ -71,7 +74,7 @@ extern pot_int potLanczosInit( pot_lanczos *potLanczos, pot_int nCols, pot_int n
         goto exit_cleanup;
     }
     
-    potLanczos->maxIter = POTLP_MIN(nCols, 120);
+    potLanczos->maxIter = POTLP_MIN(nCols, 150);
     
     POT_CALL(potVecCreate(&potLanczos->vVec));
     POT_CALL(potVecInit(potLanczos->vVec, nCols, nCones));
@@ -174,7 +177,7 @@ extern pot_int potLanczosSolve( pot_lanczos *potLanczos, pot_vec *lczStart, pot_
     potVecExport(vVec, VMat);
     
     int k;
-    int checkFreq = (int) potl->maxIter / 10;
+    int checkFreq = (int) potl->maxIter / 5;
     double finalEigs = 0.0;
     
     /* Start Lanczos iterations */
@@ -272,11 +275,12 @@ extern pot_int potLanczosSolve( pot_lanczos *potLanczos, pot_vec *lczStart, pot_
     LANCZOS_DEBUG("Lanczos finished in %d iterations \n", k);
     LANCZOS_DEBUG("Lanczos provides eigenvalue of %f \n", finalEigs);
     
-    if ( finalEigs > 0.0 || k == maxIter - 1) {
-        retcode = RETCODE_FAILED;
-    }
+//    if ( finalEigs > 0.0 || k == maxIter - 1) {
+//        retcode = RETCODE_FAILED;
+//    }
     
 exit_cleanup:
+    
     return retcode;
 }
 

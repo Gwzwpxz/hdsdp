@@ -9,6 +9,7 @@
 
 #include "pot_def.h"
 #include "pot_param.h"
+#include "cone_filter.h"
 
 #include <signal.h>
 
@@ -66,7 +67,10 @@ typedef struct {
 typedef struct {
     
     pot_int n; ///< Dimension of x
+    pot_int nCone; ///< Dimension of conic variables
     pot_int maxIter; /// Maximum subspace dimension
+    
+    col_filter *coneFilter; ///< Cone filter
      
     void *MMat;  ///< Abstract Matrix
     
@@ -84,9 +88,8 @@ typedef struct {
     
     double  *eiDblMat; ///< Eigen double workspace
     pot_int *eiIntMat; ///< Auxiliary int workspace
-    
+        
     void (*lczMatVec) (void *, pot_vec *, pot_vec *);
-    void (*lczPartMatVec) (void *, int *, pot_vec *, pot_vec *);
     
 } pot_lanczos;
 
@@ -112,6 +115,7 @@ typedef struct {
     double  *HessMat; ///< Hessian
     
     pot_constr_mat *AMat;
+    col_filter *coneFilter;
     
     pot_lanczos *lczTool;
     
@@ -138,6 +142,7 @@ typedef struct {
     
     double  curvTime;
     
+    int   pausePotStep;
     void  *cbInfo;
     void (*cbPotFunc) (void *); ///< Callback function to extract information
     

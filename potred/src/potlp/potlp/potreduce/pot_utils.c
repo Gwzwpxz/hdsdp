@@ -9,7 +9,28 @@ static double my_clock( void ) {
     
     struct timeval t;
     gettimeofday(&t, NULL);
-    return (1.0e-6 * t.tv_usec + t.tv_sec);
+    return ( 1e-06 * t.tv_usec + t.tv_sec );
+}
+
+static int partition( int *ind, double *val, int l, int h ) {
+    
+    double tmp2 = 0, tmp3, p = val[l];
+    int tmp = l;
+    
+    while ( l < h ) {
+        while ( l < h && val[h] >= p ) { --h; }
+        while ( l < h && val[l] <= p ) { ++l; }
+        
+        if ( l < h ) {
+            tmp2 = val[l]; val[l] = val[h]; val[h] = tmp2;
+            tmp3 = ind[l]; ind[l] = ind[h]; ind[h] = tmp3;
+        }
+    }
+    
+    tmp2 = val[l]; val[l] = val[tmp]; val[tmp] = tmp2;
+    tmp3 = ind[l]; ind[l] = ind[tmp]; ind[tmp] = tmp3;
+    
+    return l;
 }
 
 extern double potUtilGetTimeStamp( void ) {
@@ -25,6 +46,9 @@ extern void potUtilGetDefaultParams( double dblParams[NUM_DBL_PARAM], int intPar
     dblParams[DBL_PARAM_RELFEASTOL] = 1e-04;
     /* Time limit  */
     dblParams[DBL_PARAM_TIMELIMIT] = 600.0;
+    /* Relative accuracy to start barrier */
+    dblParams[DBL_PARAM_BARSTARTTOL] = 1e-03;
+    
     /* Maximum iteration */
     intParams[INT_PARAM_MAXITER] = 10000;
     /* Maximum Ruiz iteration */
@@ -70,6 +94,7 @@ extern void potUtilPrintParams( double dblParams[NUM_DBL_PARAM], int intParams[N
     printf("RelFeasTol  is set to %3.3e \n", dblParams[DBL_PARAM_RELFEASTOL]);
     printf("RelOptTol   is set to %3.3e \n", dblParams[DBL_PARAM_RELOPTTOL]);
     printf("TimeLimit   is set to %.0fs \n", dblParams[DBL_PARAM_TIMELIMIT]);
+    printf("BarStartTol is set to %.0fs \n", dblParams[DBL_PARAM_BARSTARTTOL]);
     
     return;
 }
@@ -83,6 +108,16 @@ extern void potUtilPrintIParams( double dblParams[NUM_DBL_PARAM], int intParams[
     return;
 }
 
+extern void potUtilSortbyDbl( int *ind, double *val, int low, int high ) {
+    
+    if ( low < high ) {
+        int p = partition(ind, val, low, high);
+        potUtilSortbyDbl(ind, val, low, p - 1);
+        potUtilSortbyDbl(ind, val, p + 1, high);
+    }
+    
+    return;
+}
 
 /* Debugging */
 extern void potUtilPrintDblContent( int n, double *d ) {

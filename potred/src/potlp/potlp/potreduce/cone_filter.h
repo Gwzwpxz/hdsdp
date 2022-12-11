@@ -1,5 +1,5 @@
-#ifndef lp_filter_h
-#define lp_filter_h
+#ifndef cone_filter_h
+#define cone_filter_h
 
 #include "pot_def.h"
 
@@ -23,7 +23,7 @@ extern "C" {
 extern pot_int ConeFilterCreate( col_filter **pcolFilter );
 extern pot_int ConeFilterInit( col_filter *colFilter, pot_int nCone, double *coneData );
 extern void ConeFilterClear( col_filter *colFilter );
-extern void ConeFilterBuildUp( col_filter *colFilter );
+extern void ConeFilterBuildUp( col_filter *colFilter, double threshVal );
 extern void ConeFilterZeroOut( col_filter *colFilter, double *xVal );
 extern void ConeFilterDestroy( col_filter **pcolFilter );
 
@@ -31,4 +31,4 @@ extern void ConeFilterDestroy( col_filter **pcolFilter );
 }
 #endif
 
-#endif /* lp_filter_h */
+#endif /* cone_filter_h */

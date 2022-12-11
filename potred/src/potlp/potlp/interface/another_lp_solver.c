@@ -58,9 +58,9 @@ static void POT_FNAME(potLpReWeight) ( potlp_solver *potlp ) {
     double dOmega = potlp->dResOmega;
     double cOmega = potlp->cplResOmega;
     
-    double pInfeas = potlp->pInfeas;
-    double dInfeas = potlp->dInfeas;
-    double cInfeas = potlp->complGap;
+    double pInfeas = potlp->pInfeasRel;
+    double dInfeas = potlp->dInfeasRel;
+    double cInfeas = potlp->complGapRel;
     
     REWEIGHT_DEBUG("Before", pOmega, dOmega, cOmega);
     
@@ -163,7 +163,7 @@ static pot_int POT_FNAME(potLpNewtonStep) ( potlp_solver *potlp ) {
     xNew[1] = potlp->tau;
     
     LPQMatScal(potlp->potQMatrix, pot->xVec->x);
-     potReductionRestart(pot);
+    potReductionRestart(pot);
     
 exit_cleanup:
     return retcode;
@@ -398,15 +398,19 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
                    elapsedTime / 3600.0 );
         }
         
+        double barTol = potlp->dblParams[DBL_PARAM_BARSTARTTOL];
+        
 #ifndef LINSYSDUMMY
-        if ( ((relGap < 5 * relOptTol || minGap < 5 * relOptTol ) && pInfeas < 5 * relFeasTol && dInfeas < 5 * relFeasTol) && !useIPM && maxBarIter && !intInfo ) {
-            printf("Approaching optimality. Using an interior point step to cleanup. \n");
+        if ( ( pInfeas < barTol && dInfeas < barTol ) && !useIPM && maxBarIter && !intInfo ) {
+            printf("Reached barrier tolerance %5.1e. "
+                   "Using %d interior point steps to cleanup. \n", barTol, maxBarIter);
             potlp->useIPM = 1;
         }
 #endif
         
         /* Interior point solver */
         if ( useIPM && nBarIter < maxBarIter && !intInfo ) {
+            potlp->potIterator->pausePotStep = 1;
             potlp->nBarIter += 1;
             int icode = POT_FNAME(potLpNewtonStep)(potlp);
             if ( icode != RETCODE_OK ) {
@@ -415,6 +419,10 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
                 *intInfo = 1;
                 return;
             }
+        }
+        
+        if ( nBarIter >= maxBarIter ) {
+            potlp->potIterator->pausePotStep = 0;
         }
         
 #ifdef MATLAB_MEX_FILE
@@ -492,8 +500,6 @@ static void POT_FNAME(LPSolverIObjScale)( potlp_solver *potlp ) {
     potlp->objScaler = 1.0;
     potlp->rhsScaler = 1.0;
     
-    double bcRatio = rhsOneNorm / objOneNorm;
-    
 //    if ( potlp->lpObjNorm > 1e+08 || potlp->lpRHSNorm > 1e+08 || bcRatio < 1e-03 || bcRatio > 1e+03 ) {
 //        potlp->intParams[INT_PARAM_COEFSCALE] = 1;
 //    }
@@ -504,6 +510,7 @@ static void POT_FNAME(LPSolverIObjScale)( potlp_solver *potlp ) {
         int iMaxAbsc = idamax(&potlp->nCol, lpObj, &potIntConstantOne);
         double maxAbsb = fabs(lpRHS[iMaxAbsb]);
         double maxAbsc = fabs(lpObj[iMaxAbsc]);
+        double bcRatio = rhsOneNorm / objOneNorm;
         
         if ( bcRatio > 1e+03 ) {
             potlp->rhsScaler = maxAbsb + 1.0;
@@ -654,6 +661,11 @@ static void POT_FNAME(LPSolverIParamAdjust)( potlp_solver *potlp ) {
     
     pot->curvLimit = potlp->intParams[INT_PARAM_CURVATURE] - 1;
     pot->curvMinInterval = potlp->intParams[INT_PARAM_CURVINTERVAL];
+    
+    if ( potlp->intParams[INT_PARAM_RECORDFREQ] == 0 ) {
+        potlp->intParams[INT_PARAM_RECORDFREQ] = potlp->intParams[INT_PARAM_MAXITER];
+        potlp->nRecordFreq = potlp->intParams[INT_PARAM_MAXITER];
+    }
     
     return;
 }

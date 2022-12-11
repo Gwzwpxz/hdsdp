@@ -19,7 +19,7 @@ typedef struct {
 
 typedef struct {
     
-    int    n;
+    pot_int  n;
     
     pot_int *Ap;
     pot_int *Ai;

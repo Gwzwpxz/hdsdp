@@ -1,5 +1,5 @@
 #include "pot_utils.h"
-#include "lp_filter.h"
+#include "cone_filter.h"
 
 extern pot_int ConeFilterCreate( col_filter **pcolFilter ) {
     
@@ -59,11 +59,17 @@ extern void ConeFilterClear( col_filter *colFilter ) {
     return;
 }
 
-#define FILTER_RATIO  (0.300)
-#define FILTER_THRESH (1e-03)
-extern void ConeFilterBuildUp( col_filter *colFilter ) {
+#ifdef FILTER_DEBUG
+#undef FILTER_DEBUG
+#define FILTER_DEBUG printf
+#else
+#define FILTER_DEBUG(...)
+#endif
+#define FILTER_RATIO  (0.1)
+extern void ConeFilterBuildUp( col_filter *colFilter, double threshVal ) {
     /* Build up filter for the current iterate */
     double *xVal = colFilter->coneVals;
+    double *coneFilter = colFilter->coneFilter;
     
     int nCone = colFilter->nCone;
     int nFilters = nCone * FILTER_RATIO;
@@ -74,9 +80,16 @@ extern void ConeFilterBuildUp( col_filter *colFilter ) {
         coneOrder[i] = i;
     }
     
-    potUtilSortbyDbl(coneOrder, xVal, 0, nCone);
-    for ( nActive = 0; ( xVal[nActive] < FILTER_THRESH ) &&
-                       ( nActive <= nFilters ); ++nActive );
+    POTLP_MEMCPY(coneFilter, xVal, double, nCone);
+    potUtilSortbyDbl(coneOrder, coneFilter, 0, nCone - 1);
+    for ( nActive = 0; nActive <= nFilters; ++nActive ) {
+        if ( coneFilter[nActive] > threshVal ) {
+            break;
+        }
+    }
+    
+    colFilter->nActCol = nActive;
+    FILTER_DEBUG("%d variables not in support. \n", nActive);
     
     return;
 }

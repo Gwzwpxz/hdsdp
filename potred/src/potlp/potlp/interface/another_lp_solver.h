@@ -78,14 +78,14 @@ typedef struct {
     double pResOmega;
     double dResOmega;
     double cplResOmega;
-    
+        
     lp_qmatrix *potQMatrix;
     pot_solver *potIterator;
     pot_constr_mat *potConstrMat;
     pot_fx *potObjF;
     
     /* Interior point solvers */
-    lp_newton    *ipm;
+    lp_newton *ipm;
     int useIPM;
     int nBarIter;
     pot_qpsolver *qp;

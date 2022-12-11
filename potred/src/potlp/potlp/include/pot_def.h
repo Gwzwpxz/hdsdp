@@ -34,6 +34,13 @@ typedef int pot_int;
 //#include "memwatch.h"
 //#endif
 
+//#define POTQP_DEBUG
+//#define RUIZ_DEBUG
+//#define LANCZOS_DEBUG
+//#define POTLP_DEBUG
+//#define REWEIGHT_DEBUG
+//#define FILTER_DEBUG
+
 // Memory handler
 #define POTLP_FREE(var) do {free((var)); (var) = NULL;} while (0)
 #define POTLP_INIT(var, type, size) (var) = (type *) calloc(size, sizeof(type))
@@ -72,6 +79,7 @@ typedef int pot_int;
 #define DBL_PARAM_RELFEASTOL    0
 #define DBL_PARAM_RELOPTTOL     1
 #define DBL_PARAM_TIMELIMIT     2
+#define DBL_PARAM_BARSTARTTOL   3
 
 // Version information
 #define VERSION_MAJOR           0

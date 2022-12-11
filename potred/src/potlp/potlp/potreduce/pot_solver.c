@@ -156,11 +156,11 @@ static double potReductionPotLineSearch( pot_fx *objFunc, double rhoVal, double 
         ratio = 1e+06;
     }
     
-    ratio = 0.99 * ratio;
+    ratio = 0.95 * ratio;
     
     double fVal = 0.0;
     double potVal = POTLP_INFINITY;
-    double targetPotVal = ( potValTmp > 0.0 ) ? 0.9 * potValTmp : 1.05 * potValTmp;
+    double targetPotVal = ( potValTmp > 0.0 ) ? 0.95 * potValTmp : 1.05 * potValTmp;
     
     for ( ; ratio > 1.0; ) {
         potVecCopy(xVec, auxVec);
@@ -191,6 +191,10 @@ static double potReductionPotLineSearch( pot_fx *objFunc, double rhoVal, double 
 static pot_int potReductionOneStep( pot_solver *pot ) {
     
     pot_int retcode = RETCODE_OK;
+    
+    if ( pot->pausePotStep ) {
+        return retcode;
+    }
     
     pot_fx *objFunc = pot->objFunc;
     pot_constr_mat *AMat = pot->AMat;
@@ -239,6 +243,9 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
         /* Scale xPres */
         potVecCopy(xPres, xNorm);
         potVecConeNormalize(xNorm);
+        
+        /* Build up filter */
+        ConeFilterBuildUp(pot->coneFilter, xMinVal * 10);
         
         lczCode = potLanczosSolve(pot->lczTool, gVec, mkVec);
         pot->curvTime += potUtilGetTimeStamp() - curvTStart;
@@ -331,9 +338,9 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
         double potValTmp = potReductionComputePotValue(rhoVal, fValTmp, zVal, auxVec1);
         double potLineVal = POTLP_INFINITY;
         
-        if ( pot->curvInterval < 10 && (0) ) {
+        if ( pot->curvInterval < 3 && (0) ) {
             potLineVal = potReductionPotLineSearch(objFunc, rhoVal, zVal, xPres,
-                                                   dXStep, auxVec2, potValTmp, 0.0);
+                                                   dXStep, auxVec2, potValTmp, 1e-05);
         }
         
         potVecCopy(xPres, xPrev);
@@ -364,7 +371,7 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
     }
     
     if ( potVal != POTLP_INFINITY ) {
-        pot->potRedAvg = ( potVal == POTLP_INFINITY ) ? potReduce : potReduce * 0.8 + pot->potRedAvg * 0.2;
+        pot->potRedAvg = ( potVal == POTLP_INFINITY ) ? potReduce : potReduce * 0.9 + pot->potRedAvg * 0.1;
     }
         
     if ( (potReduce > 0.1 * pot->potRedAvg && pot->useCurvature) || lczCode != RETCODE_OK ) {
@@ -372,8 +379,8 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
             pot->allowCurvature = 0;
             printf("Curvature is shut down due to failed Lanczos \n");
         } else {
-            pot->curvMinInterval = POTLP_MAX(pot->curvMinInterval * 10, 2000);
-            pot->curvMinInterval = POTLP_MIN(pot->curvMinInterval, 10000);
+            pot->curvMinInterval = POTLP_MAX(pot->curvMinInterval * 2, 500);
+            pot->curvMinInterval = POTLP_MIN(pot->curvMinInterval, 5000);
 //            printf("Curvature is shut down due to insufficient descent \n");
         }
     }
@@ -385,13 +392,14 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
     
     pot->useCurvature = 0;
         
-    if ( potReduce > pot->potRedAvg && pot->curvInterval >= pot->curvMinInterval &&
+    if ( potReduce > pot->potRedAvg / 2 && pot->curvInterval >= pot->curvMinInterval &&
         pot->allowCurvature ) {
         pot->useCurvature = 1;
     }
     
     
-    POTLP_DEBUG("F: %10.3e Alpha: [%6.1e, %6.1e] Beta [%3.3f] PotRed [%3.3f] \n",
+    POTLP_DEBUG("           "
+                "F: %10.3e Alpha: [%+6.1e, %+6.1e] Beta [%3.3f] PotRed [%3.3f] \n",
                 pot->fVal, alphaStep[0], alphaStep[1], pot->betaRadius, potReduce);
     
 exit_cleanup:
@@ -431,12 +439,17 @@ static void potLPPotentialHVec( void *pot, pot_vec *vVec, pot_vec *vVecP ) {
     /* Auxiliary */
     pot_vec *auxVec1 = p->auxVec1;
     pot_vec *auxVec2 = p->auxVec2;
+    pot_vec *auxVec3 = p->xStepVec;
     
-    /* Reset data */
+    /* Reset data and save v */
     potVecReset(vVecP);
+    potVecCopy(vVec, auxVec3);
     
     /* a1 <- Proj_x( v ) */
     potConstrMatProj(AMat, vVec, auxVec1);
+    
+    /* Support projection */
+    ConeFilterZeroOut(p->coneFilter, vVec->x + vVec->n - vVec->ncone);
     
     /* Store u[2] */
     potVecConeAxinvsqrVpy(-fVal, xVec, auxVec1, vVecP);
@@ -451,6 +464,12 @@ static void potLPPotentialHVec( void *pot, pot_vec *vVec, pot_vec *vVecP ) {
     
     /* Pv <- Proj_e ( v ) */
     potConstrMatProj(AMat, vVecP, NULL);
+    
+    /* Support projection */
+    ConeFilterZeroOut(p->coneFilter, vVecP->x + vVecP->n - vVecP->ncone);
+    
+    /* Copy back */
+    potVecCopy(auxVec3, vVec);
     
     return;
 }
@@ -509,6 +528,9 @@ static void potLPPotentialScaledHVec( void *pot, pot_vec *vVec, pot_vec *vVecP )
     potVecReset(vVecP);
     potVecReset(auxVec2);
     
+    /* Support projection */
+    ConeFilterZeroOut(p->coneFilter, vVec->x + vVec->n - vVec->ncone);
+    
     /* v <- Proj_x ( v ) */
     potConstrMatScalProj(AMat, xVecNorm, vVec, NULL);
     
@@ -534,6 +556,9 @@ static void potLPPotentialScaledHVec( void *pot, pot_vec *vVec, pot_vec *vVecP )
     
     /* Pv <- Proj_x ( v ) */
     potConstrMatScalProj(AMat, xVecNorm, vVecP, NULL);
+    
+    /* Support projection */
+    ConeFilterZeroOut(p->coneFilter, vVecP->x + vVecP->n - vVecP->ncone);
     
     /* Copy back */
     potVecCopy(auxVec3, vVec);
@@ -608,11 +633,14 @@ extern pot_int potLPInit( pot_solver *pot, pot_int vDim, pot_int vConeDim ) {
     POT_CALL(potVecCreate(&pot->auxVec2));
     POT_CALL(potVecInit(pot->auxVec2, vDim, vConeDim));
     
+    POT_CALL(ConeFilterCreate(&pot->coneFilter));
+    ConeFilterInit(pot->coneFilter, vConeDim, pot->xVec->x + vDim - vConeDim);
+    
     /* Potential value is slightly larger */
-    pot->rhoVal = 1.1 * (vConeDim + sqrt(vConeDim));
+    pot->rhoVal = 100 * (vConeDim + sqrt(vConeDim));
     POT_CALL(potLanczosInit(pot->lczTool, vDim, vConeDim));
-//    potLanczosInitData(pot->lczTool, pot, potLPPotentialScaledHVec);
-     potLanczosInitData(pot->lczTool, pot, potLPPotentialHVec);
+    potLanczosInitData(pot->lczTool, pot, potLPPotentialScaledHVec);
+//     potLanczosInitData(pot->lczTool, pot, potLPPotentialHVec);
     
 #ifdef POT_DEBUG
     POTLP_INIT(pot->HessMat, double, vDim * vDim);
@@ -689,8 +717,7 @@ extern pot_int potReductionSolve( pot_solver *pot ) {
     for ( int i = 0; ; ++i ) {
         
         /* Invoke curvature from time to time. But never too frequently */
-        if ( i % 5000 == 0 && i < 10000 &&
-            pot->curvInterval >= pot->curvMinInterval &&
+        if ( i % 5000 == 0 && pot->curvInterval >= pot->curvMinInterval &&
             pot->allowCurvature ) {
             pot->useCurvature = 1;
         }
@@ -768,6 +795,7 @@ extern void potLPClear( pot_solver *pot ) {
         POTLP_FREE(pot->HessMat);
     }
     
+    ConeFilterDestroy(&pot->coneFilter);
     POTLP_ZERO(pot, pot_solver, 1);
     
     return;
