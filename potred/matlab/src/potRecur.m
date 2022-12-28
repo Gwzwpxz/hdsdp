@@ -41,13 +41,13 @@ fprintf("%5s  %8s  %8s  %8s|  %8s  %8s  %10s  %10s %10s %10s\n",...
 x_cum = x_pres;
 
 logstar = "";
-allowcurv = 1;
+allowcurv = 0;
 usecurvature = 1;
 curvinterval = 0;
 ncurvs = 0;
 
 nbuffer = 32;
-freq = 20;
+freq = 2000000;
 Xbuff = zeros(n, nbuffer);
 rcount = 0;
 
@@ -59,7 +59,7 @@ for i = 1:maxiter
         Xbuff(:, mod(rcount, nbuffer) + 1) = x_pres;
     end % End if
      
-    if rcount >= nbuffer && 0
+    if rcount >= nbuffer
 %         Xbuff(:, 1) = randn(n, 1);
         AX = A * Xbuff;
         andalp = adsqp(AX, Xbuff(coneidx, :), 0.0 * f);
@@ -99,13 +99,17 @@ for i = 1:maxiter
         % Prepare momentum
         mk = x_pres - x_prev;
         
+        if i >= 100
+            mk = mnt;
+        end % End if
+        
         % Gradient projection
         gk = g;
         gk(coneidx) = gk(coneidx) - (f ./ x_pres(coneidx)) / rho;
         
         if usecurvature && allowcurv
             logstar = "*";
-            method = "scaled";
+            method = "direct";
             xorig = x_pres;
             xorig(coneidx) = xorig(coneidx) .* x_cum(coneidx);
             [mk, ~] = findnegacurv(x_pres, m, coneidx, projidx, rho, g, f, ATA, AT, A, [], method, xorig);
@@ -150,7 +154,7 @@ for i = 1:maxiter
         
     end % End if
     
-    [alpha, mval] = subtrust(H, h, M, beta^2 / 3, 1e-10);
+    [alpha, mval] = subtrust(H, h, M, beta^2 / 2.5, 1e-10);
     d = alpha(1) * gk + alpha(2) * mk;
     
     xtmp = x_pres + d;
@@ -188,7 +192,7 @@ for i = 1:maxiter
 %     x_pres(1:mlp) = PPT \ P * (-Q * x_pres(m+1:end));
     
     curvinterval = curvinterval + 1;
-    if potred > -0.1 && curvinterval > 100
+    if potred > -50 && curvinterval > 100
         usecurvature = true;
         curvinterval = 0;
     end % End if
@@ -203,6 +207,9 @@ for i = 1:maxiter
     pres = Alp * x - blp;
     dres = Alp' * y + s - clp;
     cpl = blp' * y - clp' * x;
+    
+    mnt = findntdir(Alp, blp, clp, x, y, s, 1);
+    mnt = mnt ./ E;
     
     if mod(i, 500)
         fprintf("%5d | %8.2e %8.2e %8.2e | %+8.2e  %+8.2e  %+8.2e  %+8.2e  %+8.2e  %+8.2e %1.1s %3.3f %+3.3e\n",...

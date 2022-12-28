@@ -93,9 +93,9 @@ static void POT_FNAME(potLpReWeight) ( potlp_solver *potlp ) {
         double minOmega = POTLP_MIN(pOmega, dOmega);
         minOmega = POTLP_MIN(minOmega, cOmega);
 
-//        pOmega = pOmega / minOmega;
-//        dOmega = dOmega / minOmega;
-//        cOmega = cOmega / minOmega;
+        pOmega = pOmega / minOmega;
+        dOmega = dOmega / minOmega;
+        cOmega = cOmega / minOmega;
         
 //        double maxOmega = POTLP_MAX(pOmega, dOmega);
 //        maxOmega = POTLP_MAX(maxOmega, cOmega);
@@ -109,20 +109,44 @@ static void POT_FNAME(potLpReWeight) ( potlp_solver *potlp ) {
         dOmega = dInfeas / minInfeas;
         cOmega = cInfeas / minInfeas;
         
-        pOmega = pOmega * pOmega;
-        dOmega = dOmega * dOmega;
-        cOmega = cOmega * cOmega;
+//        pOmega = POTLP_MIN(pOmega, rMax);
+//        dOmega = POTLP_MIN(dOmega, rMax);
+//        cOmega = POTLP_MIN(cOmega, rMax);
         
-        pOmega = POTLP_MIN(pOmega, rMax);
-        dOmega = POTLP_MIN(dOmega, rMax);
-        cOmega = POTLP_MIN(cOmega, rMax);
+        double sumOmega = pOmega + dOmega + cOmega;
+        pOmega = 3.0 * pOmega / sumOmega;
+        dOmega = 3.0 * dOmega / sumOmega;
+        cOmega = 3.0 * cOmega / sumOmega;
     }
     
     REWEIGHT_DEBUG("After", pOmega, dOmega, cOmega);
     
+#if 1
+    /* Reallocate scaling */
+    int nLPRow = potlp->nRow;
+    int nLPCol = potlp->nCol;
+    
+    double *addScaler = NULL;
+    POTLP_INIT(addScaler, double, nLPCol + nLPRow + 1);
+    
+    for ( int i = 0; i < nLPRow; ++i ) {
+        addScaler[i] = 1.0 / pOmega;
+    }
+    
+    for ( int i = nLPRow; i < nLPRow + nLPCol; ++i ) {
+        addScaler[i] = 1.0 / dOmega;
+    }
+    
+    addScaler[nLPCol + nLPRow] = 1.0 / cOmega;
+    spMatRowScal(nLPCol + nLPRow + 1, potlp->potQMatrix->QMatBeg, potlp->potQMatrix->QMatIdx, potlp->potQMatrix->QMatElem, addScaler);
+    POTLP_FREE(addScaler);
+#else
     potlp->pResOmega = pOmega;
     potlp->dResOmega = dOmega;
     potlp->cplResOmega = cOmega;
+#endif
+    
+    potReductionRestart(potlp->potIterator);
     
     return;
 }

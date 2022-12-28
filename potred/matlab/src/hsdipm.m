@@ -1,10 +1,14 @@
 function [x, y, s, kappa, tau] = hsdipm(A, b, c)
 % Implement a primal-dual interior point method using HSD embedding
-
 warning off;
 [m, n] = size(A);
 x = ones(n, 1);
-y = zeros(m, 1);
+nrmb = norm(b);
+if norm(b) > 0 && 0
+    y = (c' * x) * b / nrmb^2;
+else
+    y = zeros(m, 1);
+end % End if
 s = ones(n, 1);
 tau = 1;
 kappa = 1;
@@ -28,7 +32,7 @@ for i = 1:100
     pinf = norm(rp) / (tau * bnrm);
     dinf = norm(rd) / (tau * cnrm);
     
-    if max([pinf, dinf, mu]) < 1e-08
+    if max([pinf, dinf, mu]) < 5e-02 || mu < 1e-02
         break;
     end % End if
     
@@ -47,6 +51,9 @@ for i = 1:100
     rhs1 = [-Dinvc; b]; % m + n
     rhs2 = [rd ./ D + DinvXinvrmu1; rp];
     aux = [Dinvc; b]; % m + n
+    
+%     ADAT = ADinv * ADinv';
+%     dy = pcg(ADAT, rp, 1e-03, 100, diag(diag(ADAT)));
     
     [L, DD, p] = ldl(M, 'vector');
     p = p'; LT = L'; pinv = dsdpInvPerm(p)';

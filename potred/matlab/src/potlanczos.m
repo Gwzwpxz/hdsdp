@@ -17,11 +17,12 @@ maxiter = 150;
 ncone = length(coneidx);
 nmin = ceil(0.1 * ncone);
 [~, xspmin] = mink(xorig(coneidx), nmin);
-xspsmall = find(xorig(coneidx) < min(f, 1e-03));
-xsp = union(xspmin, xspsmall);
+xspsmall = find(xorig(coneidx) < min(min(xorig(coneidx)) * 10, 1));
+xsp = intersect(xspmin, xspsmall);
 xsp = xsp + n - length(coneidx);
 % find(x(coneidx) < 1e-02) + n - length(coneidx);
 
+fprintf("Reduced support %d \n", length(xsp));
 if isempty(vstart)
 if scale
 %     v = x;
@@ -98,7 +99,7 @@ for k = 1:maxiter
             delta = min(res, res^2 / beta);
             
             if delta <= tol || (lam > 0 && lam - abs(delta) > 0)
-                fprintf("Lanzos iteration %d \n", k);
+                fprintf("Lanczos iteration %d \n", k);
                 break;
             end % End if
             
