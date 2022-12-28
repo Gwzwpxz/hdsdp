@@ -21,7 +21,8 @@ pobjold = inf;
 pbest = pobjold;
 alphabest = alpha;
 
-l = zeros(nc, 1);
+l = ones(nc, 1) * 0.0;
+l(end) = min(Xc(end, :));
 
 for i = 1:100
     

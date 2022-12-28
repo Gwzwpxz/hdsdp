@@ -140,6 +140,11 @@ extern double potVecDot( pot_vec *pVecX, pot_vec *pVecY ) {
     return dot(&pVecX->n, pVecX->x, &potIntConstantOne, pVecY->x, &potIntConstantOne);
 }
 
+extern double potVecArrDot( pot_vec *pVecX, double *dArray ) {
+    
+    return dot(&pVecX->n, pVecX->x, &potIntConstantOne, dArray, &potIntConstantOne);
+}
+
 /** @brief Utility for setting up the gradient of the potential function
  *
  */

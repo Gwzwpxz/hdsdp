@@ -44,6 +44,16 @@ static void slv2by2( double HplusM[4], const double rhsVec[2], double solVec[2] 
     return;
 }
 
+static int is2by2pd( double projH[4] ) {
+    
+    if ( (projH[0] > 0) && (projH[1] > 0) &&
+        (projH[0] * projH[3] - projH[2] * projH[2] > 0) ) {
+        return 1;
+    }
+    
+    return 0;
+}
+
 /** @brief Compute the minimum eigenvalue of a 2 by 2 matrix
  *
  */
@@ -76,6 +86,17 @@ static double potReductionTrustRegionSolve( double alpha[2], double projH[4], do
         return modelVal;
     }
     
+    /* Check if H is positive definite */
+    if ( is2by2pd(projH) ) {
+        slv2by2(projH, projh, alpha);
+        if ( quadform2by2(projG, NULL, alpha) <= trustRadius ) {
+            alpha[0] = -alpha[0];
+            alpha[1] = -alpha[1];
+            double modelVal = quadform2by2(projH, projh, alpha);
+            return (modelVal > 0) ? -POTLP_INFINITY : modelVal;
+        }
+    }
+    
     /* 2 by 2 eigen solver */
     double GinvL[4] = {0.0};
     slv2by2(projG, &projH[0], &GinvL[0]);
@@ -88,11 +109,10 @@ static double potReductionTrustRegionSolve( double alpha[2], double projH[4], do
     
     double lamUpBound = (lamLowBound > 1.0) ? lamLowBound : 1.0;
     double HplusLamG[4] = {0.0};
+    double alphaMalpha = 0.0;
     
     /* Reach out for an upper-bound */
     while (1) {
-        
-        lamUpBound = lamUpBound * 2.0;
         
         HplusLamG[0] = projH[0] + lamUpBound * projG[0];
         HplusLamG[1] = projH[1] + lamUpBound * projG[1];
@@ -100,19 +120,22 @@ static double potReductionTrustRegionSolve( double alpha[2], double projH[4], do
         HplusLamG[3] = projH[3] + lamUpBound * projG[3];
         
         slv2by2(HplusLamG, projh, alpha);
-        alpha[0] = -alpha[0]; alpha[1] = -alpha[1];
-        
         double alphaMalpha = quadform2by2(projG, NULL, alpha);
         
         if ( alphaMalpha - trustRadius <= 0 ) {
-            lamLowBound = lamUpBound * 0.5;
+            if ( lamUpBound > 1.0 ) {
+                lamLowBound = lamUpBound * 0.5;
+            }
             break;
         }
+        
+        lamUpBound = lamUpBound * 2.0;
     }
     
     /* Trace back by Bisection */
     double diff = lamUpBound - lamLowBound;
-    double dBound = diff * 1e-08;
+    double dBound = diff * 1e-10;
+    double normDiff = 0.0;
     
     while ( diff > dBound ) {
         
@@ -123,10 +146,8 @@ static double potReductionTrustRegionSolve( double alpha[2], double projH[4], do
         HplusLamG[3] = projH[3] + lamCurrent * projG[3];
         
         slv2by2(HplusLamG, projh, alpha);
-        alpha[0] = -alpha[0]; alpha[1] = -alpha[1];
-        
-        double alphaMalpha = quadform2by2(projG, NULL, alpha);
-        double normDiff = alphaMalpha - trustRadius;
+        alphaMalpha = quadform2by2(projG, NULL, alpha);
+        normDiff = alphaMalpha - trustRadius;
         
         if ( normDiff > tol ) {
             lamLowBound = lamCurrent;
@@ -139,6 +160,7 @@ static double potReductionTrustRegionSolve( double alpha[2], double projH[4], do
         diff = lamUpBound - lamLowBound;
     }
     
+    alpha[0] = -alpha[0]; alpha[1] = -alpha[1];
     double modelVal = quadform2by2(projH, projh, alpha);
     return (modelVal > 0) ? -POTLP_INFINITY : modelVal;
 }
@@ -318,12 +340,12 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
     while (1) {
         
         double modelVal = potReductionTrustRegionSolve(alphaStep, pot->projHessMat, pot->projgVec,
-                                                       pot->projGMat, pot->betaRadius * pot->betaRadius / 2.5,
+                                                       pot->projGMat, pot->betaRadius * pot->betaRadius / 4.0,
                                                        1e-10);
         
         // POTLP_DEBUG("beta = %e | a[0] = %e | a[1] = %e \n", pot->betaRadius, alphaStep[0], alphaStep[1]);
         
-        if ( modelVal > 0.0 || pot->betaRadius < 1e-05 ) {
+        if ( modelVal > 0.0 || pot->betaRadius < 1e-08 ) {
             retcode = RETCODE_FAILED;
             error_traceback("Invalid model of potential function");
             goto exit_cleanup;
@@ -337,6 +359,11 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
         double zVal = pot->zVal;
         double potValTmp = potReductionComputePotValue(rhoVal, fValTmp, zVal, auxVec1);
         double potLineVal = POTLP_INFINITY;
+        
+        if ( potValTmp != potValTmp ) {
+            pot->betaRadius *= 0.25;
+            continue;
+        }
         
         if ( pot->curvInterval < 3 && (0) ) {
             potLineVal = potReductionPotLineSearch(objFunc, rhoVal, zVal, xPres,
@@ -637,10 +664,9 @@ extern pot_int potLPInit( pot_solver *pot, pot_int vDim, pot_int vConeDim ) {
     ConeFilterInit(pot->coneFilter, vConeDim, pot->xVec->x + vDim - vConeDim);
     
     /* Potential value is slightly larger */
-    pot->rhoVal = 100 * (vConeDim + sqrt(vConeDim));
+    pot->rhoVal = 0.95 * (vConeDim + sqrt(vConeDim));
     POT_CALL(potLanczosInit(pot->lczTool, vDim, vConeDim));
-    potLanczosInitData(pot->lczTool, pot, potLPPotentialScaledHVec);
-//     potLanczosInitData(pot->lczTool, pot, potLPPotentialHVec);
+    potLanczosInitData(pot->lczTool, pot, potLPPotentialHVec);
     
 #ifdef POT_DEBUG
     POTLP_INIT(pot->HessMat, double, vDim * vDim);
@@ -691,6 +717,13 @@ extern void potLPSetCallback( pot_solver *pot, void *cbInfo, void (*cbPotFunc) (
     return;
 }
 
+extern void potLPSetSclCurv( pot_solver *pot ) {
+    /* Switch to scaled Hessian when computing negative curvature */
+    potLanczosResetMatVec(pot->lczTool, potLPPotentialScaledHVec);
+    
+    return;
+}
+
 extern pot_int potReductionSolve( pot_solver *pot ) {
     
     pot_int retcode = RETCODE_OK;
@@ -712,7 +745,7 @@ extern pot_int potReductionSolve( pot_solver *pot ) {
     
     /* Initialize */
     potConstrMatPrepareX(pot->AMat, pot->xVec);
-    potConstrMatPrepareX(pot->AMat, pot->xVecOld);
+    potVecCopy(pot->xVec, pot->xVecOld); 
     
     for ( int i = 0; ; ++i ) {
         

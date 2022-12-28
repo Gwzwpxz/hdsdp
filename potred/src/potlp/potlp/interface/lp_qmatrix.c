@@ -196,6 +196,15 @@ extern void LPQMatScalBack( lp_qmatrix *QMat, double *xVal ) {
     return;
 }
 
+extern void LPQMatExport( lp_qmatrix *QMat, int **pQMatBeg, int **pQMatIdx, double **pQMatElem ) {
+    
+    *pQMatBeg = QMat->QMatBeg;
+    *pQMatIdx = QMat->QMatIdx;
+    *pQMatElem = QMat->QMatElem;
+    
+    return;
+}
+
 extern void LPQMatClear( lp_qmatrix *QMat ) {
     
     if ( !QMat ) {

@@ -79,6 +79,10 @@ typedef struct {
     double dResOmega;
     double cplResOmega;
         
+    /* Projection matrix for enforcing complementarity */
+    double *cplProj;
+    double cplProjNorm;
+    
     lp_qmatrix *potQMatrix;
     pot_solver *potIterator;
     pot_constr_mat *potConstrMat;

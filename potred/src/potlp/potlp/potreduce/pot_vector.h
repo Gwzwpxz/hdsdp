@@ -17,6 +17,7 @@ extern void potVecArrScal( pot_vec *pVecX, double *dArray );
 extern double potVecScaledDot( pot_vec *pVecX, pot_vec *pVecY, pot_vec *pVecZ );
 extern void potVecConeNormalize( pot_vec *pVec );
 extern double potVecDot( pot_vec *pVecX, pot_vec *pVecY );
+extern double potVecArrDot( pot_vec *pVecX, double *dArray );
 extern void potVecAxinvpBy( double alpha1, double alpha2, pot_vec *pVecX, double beta, pot_vec *pVecY );
 extern void potVecAxpy( double alpha, pot_vec *pVecX, pot_vec *pVecY );
 extern void potVecConeAxpy( double alpha, pot_vec *pVecX, pot_vec *pVecY );

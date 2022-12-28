@@ -74,7 +74,7 @@ extern pot_int potLanczosInit( pot_lanczos *potLanczos, pot_int nCols, pot_int n
         goto exit_cleanup;
     }
     
-    potLanczos->maxIter = POTLP_MIN(nCols, 150);
+    potLanczos->maxIter = POTLP_MIN(nCols, 100);
     
     POT_CALL(potVecCreate(&potLanczos->vVec));
     POT_CALL(potVecInit(potLanczos->vVec, nCols, nCones));
@@ -118,6 +118,17 @@ extern void potLanczosInitData( pot_lanczos *potLanczos, void *MMat, void (*lczM
     }
     
     potLanczos->MMat = MMat;
+    potLanczos->lczMatVec = lczMatVec;
+    
+    return;
+}
+
+extern void potLanczosResetMatVec( pot_lanczos *potLanczos, void (*lczMatVec) (void *, pot_vec *, pot_vec *) ) {
+    
+    if ( !potLanczos->lczMatVec ) {
+        return;
+    }
+    
     potLanczos->lczMatVec = lczMatVec;
     
     return;
@@ -177,7 +188,7 @@ extern pot_int potLanczosSolve( pot_lanczos *potLanczos, pot_vec *lczStart, pot_
     potVecExport(vVec, VMat);
     
     int k;
-    int checkFreq = (int) potl->maxIter / 5;
+    int checkFreq = (int) potl->maxIter / 2;
     double finalEigs = 0.0;
     
     /* Start Lanczos iterations */

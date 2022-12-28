@@ -30,6 +30,7 @@ extern void LPQMatTransMultiply( lp_qmatrix *QMat, double *yVal, double *qtyVal 
 extern void LPQMatProjTransform( lp_qmatrix *QMat, pot_int coneStart, double *xVal );
 extern void LPQMatScal( lp_qmatrix *QMat, double *xVal );
 extern void LPQMatScalBack( lp_qmatrix *QMat, double *xVal );
+extern void LPQMatExport( lp_qmatrix *QMat, int **pQMatBeg, int **pQMatIdx, double **pQMatElem );
 extern void LPQMatClear( lp_qmatrix *QMat );
 extern void LPQMatDestroy( lp_qmatrix **pQMat );
 

@@ -70,10 +70,10 @@ typedef int pot_int;
 #define INT_PARAM_CURVATURE     5
 #define INT_PARAM_CURVINTERVAL  6
 #define INT_PARAM_RSCALFREQ     7
-#define INT_PARAM_SCALSIMPLEX   8
-#define INT_PARAM_QPWINDOW      9
-#define INT_PARAM_RECORDFREQ   10
-#define INT_PARAM_MAXBARITER   11
+#define INT_PARAM_QPWINDOW      8
+#define INT_PARAM_RECORDFREQ    9
+#define INT_PARAM_MAXBARITER   10
+#define INT_PARAM_FORCECPL     11
 
 // Double Parameters
 #define DBL_PARAM_RELFEASTOL    0

@@ -48,8 +48,7 @@ static void POT_FNAME(potLpResidualScal) ( potlp_solver *potlp ) {
 #define REWEIGHT_DEBUG(s, p, d, c)
 #endif
 static void POT_FNAME(potLpReWeight) ( potlp_solver *potlp ) {
-    
-
+        
     /* Implement the weighted objective Heuristic */
     double rRate = potlp->dblParams[DBL_IPARAM_RESTARTRATE];
     double rMax = potlp->dblParams[DBL_IPARAM_RESTARTMAX];
@@ -64,64 +63,61 @@ static void POT_FNAME(potLpReWeight) ( potlp_solver *potlp ) {
     
     REWEIGHT_DEBUG("Before", pOmega, dOmega, cOmega);
     
-    /* Are the residuals stuck? */
-    int pStuck = 0, pFast = 0;
-    int dStuck = 0, dFast = 0;
-    int cStuck = 0, cFast = 0;
-    
-    double minInfeas = 0.0;
-    minInfeas = POTLP_MIN(pInfeas, dInfeas);
-    minInfeas = POTLP_MIN(minInfeas, cInfeas);
-    
-    if ( rRate > 0 ) {
-        /* Heuristic update */
-        if ( pInfeas > 5 * minInfeas ) { pStuck = 1; }
-        else if ( pInfeas < 1.1 * minInfeas ) { pFast = 1; }
-        if ( dInfeas > 5 * minInfeas ) { dStuck = 1; }
-        else if ( dInfeas < 1.1 * minInfeas ) { dFast = 1; }
-        if ( cInfeas > 5 * minInfeas ) { cStuck = 1; }
-        else if ( cInfeas < 1.1 * minInfeas ) { cFast = 1; }
-        
-        /* Do if stuck */
-        if ( pStuck ) { pOmega = POTLP_MIN(pOmega * rRate, rMax); }
-        if ( dStuck ) { dOmega = POTLP_MIN(dOmega * rRate, rMax); }
-        if ( cStuck ) { cOmega = POTLP_MIN(cOmega * rRate, rMax); }
-        /* Do if fast */
-        if ( pFast ) { }; if ( dFast ) { }; if ( cFast ) { };
-        
-        /* Normalize */
-        double minOmega = POTLP_MIN(pOmega, dOmega);
-        minOmega = POTLP_MIN(minOmega, cOmega);
-
-        pOmega = pOmega / minOmega;
-        dOmega = dOmega / minOmega;
-        cOmega = cOmega / minOmega;
-        
-//        double maxOmega = POTLP_MAX(pOmega, dOmega);
-//        maxOmega = POTLP_MAX(maxOmega, cOmega);
-//        pOmega = pOmega / maxOmega;
-//        dOmega = dOmega / maxOmega;
-//        cOmega = cOmega / maxOmega;
-        
+    if ( potlp->intParams[INT_PARAM_FORCECPL] ) {
+        /* Complementarity is enforced. Only need to balance primal and dual infeasibilities */
+        pOmega = sqrt(0.4 * pOmega * pOmega + 0.6 * (pInfeas / dInfeas));
+        pOmega = POTLP_MIN(pOmega, rMax);
+        pOmega = POTLP_MAX(pOmega, 1.0 / rMax);
+        dOmega = 1.0 / potlp->pResOmega;
     } else {
-        /* Make residuals the same */
-        pOmega = pInfeas / minInfeas;
-        dOmega = dInfeas / minInfeas;
-        cOmega = cInfeas / minInfeas;
+        /* Are the residuals stuck? */
+        int pStuck = 0, pFast = 0;
+        int dStuck = 0, dFast = 0;
+        int cStuck = 0, cFast = 0;
         
-//        pOmega = POTLP_MIN(pOmega, rMax);
-//        dOmega = POTLP_MIN(dOmega, rMax);
-//        cOmega = POTLP_MIN(cOmega, rMax);
+        double minInfeas = 0.0;
+        minInfeas = POTLP_MIN(pInfeas, dInfeas);
+        minInfeas = POTLP_MIN(minInfeas, cInfeas);
         
-        double sumOmega = pOmega + dOmega + cOmega;
-        pOmega = 3.0 * pOmega / sumOmega;
-        dOmega = 3.0 * dOmega / sumOmega;
-        cOmega = 3.0 * cOmega / sumOmega;
+        if ( rRate > 0 ) {
+            /* Heuristic update */
+            if ( pInfeas > 5 * minInfeas ) { pStuck = 1; }
+            else if ( pInfeas < 1.1 * minInfeas ) { pFast = 1; }
+            if ( dInfeas > 5 * minInfeas ) { dStuck = 1; }
+            else if ( dInfeas < 1.1 * minInfeas ) { dFast = 1; }
+            if ( cInfeas > 5 * minInfeas ) { cStuck = 1; }
+            else if ( cInfeas < 1.1 * minInfeas ) { cFast = 1; }
+            
+            /* Do if stuck */
+            if ( pStuck ) { pOmega = POTLP_MIN(pOmega * rRate, rMax); }
+            if ( dStuck ) { dOmega = POTLP_MIN(dOmega * rRate, rMax); }
+            if ( cStuck ) { cOmega = POTLP_MIN(cOmega * rRate, rMax); }
+            /* Do if fast */
+            if ( pFast ) { }; if ( dFast ) { }; if ( cFast ) { };
+            
+            /* Normalize */
+            double minOmega = POTLP_MIN(pOmega, dOmega);
+            minOmega = POTLP_MIN(minOmega, cOmega);
+
+            pOmega = pOmega / minOmega;
+            dOmega = dOmega / minOmega;
+            cOmega = cOmega / minOmega;
+            
+        } else {
+            /* Make residuals the same */
+            pOmega = pInfeas / minInfeas;
+            dOmega = dInfeas / minInfeas;
+            cOmega = cInfeas / minInfeas;
+            
+            pOmega = POTLP_MIN(pOmega, rMax);
+            dOmega = POTLP_MIN(dOmega, rMax);
+            cOmega = POTLP_MIN(cOmega, rMax);
+        }
     }
     
     REWEIGHT_DEBUG("After", pOmega, dOmega, cOmega);
     
-#if 1
+#if 0
     /* Reallocate scaling */
     int nLPRow = potlp->nRow;
     int nLPCol = potlp->nCol;
@@ -155,11 +151,7 @@ static pot_int POT_FNAME(potLpNewtonStep) ( potlp_solver *potlp ) {
     
     pot_int retcode = RETCODE_OK;
     
-    double simp = 1.0;
-    if ( potlp->intParams[INT_PARAM_SCALSIMPLEX] ) {
-         simp = 2 * potlp->nCol + 2;
-    }
-    
+    double simp = simp = 2 * potlp->nCol + 2;
     POT_CALL(LpNewtonOneStep(potlp->ipm, potlp->lpObj, potlp->lpRHS, potlp->colMatBeg,
                              potlp->colMatIdx, potlp->colMatElem, potlp->colVal, potlp->rowDual,
                              potlp->colDual, &potlp->kappa, &potlp->tau, potlp->pRes, potlp->dRes,
@@ -196,15 +188,8 @@ exit_cleanup:
 /* Constraint methods */
 static void POT_FNAME(potLpConstrMatImplPrepareX)( void *AMatData, pot_vec *xInit ) {
     
-    potlp_solver *potlp = (potlp_solver *) AMatData;
-    
-    double spxInit = 1.0 / xInit->ncone;
-    if ( potlp->intParams[INT_PARAM_SCALSIMPLEX] ) {
-        spxInit = 1.0;
-    }
-
     for ( int i = xInit->n - xInit->ncone; i < xInit->n; ++i ) {
-        xInit->x[i] = spxInit;
+        xInit->x[i] = 1.0;
     }
     
     return;
@@ -223,6 +208,58 @@ static void POT_FNAME(potLpConstrMatImplScalProject)( void *AMatData, pot_vec *x
     double xTy = potVecSumScalCone(xVec, yVec);
     potVecConeAxpy(-xTy, xVec, yVec);
     
+    return;
+}
+
+static void POT_FNAME(potLpConstrMatImplPrepareXCpl) ( void *AMatData, pot_vec *xInit ) {
+    /* Find an initial point satisfying b' * y = c' * x */
+    potlp_solver *potlp = (potlp_solver *) AMatData;
+    double *cplProj = potlp->cplProj;
+    int nRow = potlp->nRow;
+    
+    /* Collect complementarity projector */
+    int *QMatBeg = NULL;
+    int *QMatIdx = NULL;
+    double *QMatElem = NULL;
+    LPQMatExport(potlp->potQMatrix, &QMatBeg, &QMatIdx, &QMatElem);
+    
+    /* Get b and c */
+    for ( int i = 0; i < potlp->nRow + potlp->nCol; ++i ) {
+        cplProj[i] = QMatElem[QMatBeg[i + 1] - 1];
+    }
+    
+    potlp->cplProjNorm = nrm2(&potlp->potQMatrix->nColQ, cplProj, &potIntConstantOne);
+    
+    /* First initialize conic variables as usual */
+    for ( int i = xInit->n - xInit->ncone; i < xInit->n; ++i ) {
+        xInit->x[i] = 1.0;
+    }
+    /* Compute c' * x */
+    double cTx = dot(&xInit->n, cplProj, &potIntConstantOne, xInit->x, &potIntConstantOne);
+    
+    /* Let y = (cTx / ||b||^2) * b */
+    double bscal = nrm2(&nRow, cplProj, &potIntConstantOne);
+    bscal = -cTx / (bscal * bscal);
+    axpy(&nRow, &bscal, cplProj, &potIntConstantOne, xInit->x, &potIntConstantOne);
+    
+    return;
+}
+
+static void POT_FNAME(potLpConstrMatImplProjectCpl)( void *AMatData, pot_vec *xVec ) {
+    /* Projection onto Null space of b' * y - c' * x = 0
+      x <- x - (a' * x) * a / ||a||^2
+     */
+    potlp_solver *potlp = (potlp_solver *) AMatData;
+    double cTx = potVecArrDot(xVec, potlp->cplProj);
+    cTx = -cTx / (potlp->cplProjNorm * potlp->cplProjNorm);
+    axpy(&xVec->n, &cTx, potlp->cplProj, &potIntConstantOne, xVec->x, &potIntConstantOne);
+    
+    return;
+}
+
+static void POT_FNAME(potLpConstrMatImplScalProjectCpl)( void *AMatData, pot_vec *xVec, pot_vec *yVec ) {
+    /* This method should not be invoked */
+    assert( 0 );
     return;
 }
 
@@ -317,7 +354,7 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
     } else if ( potlp->nIter < 20000 ) {
         logFreq = 1000;
     } else {
-        logFreq = 5000;
+        logFreq = 2000;
     }
     
     int *intInfo = NULL;
@@ -348,6 +385,14 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
         double pInfeas = potlp->pInfeasRel;
         double dInfeas = potlp->dInfeasRel;
         double relGap = potlp->complGapRel;
+        
+        if ( potlp->nIter == 1 && potlp->intParams[INT_PARAM_FORCECPL] ) {
+            potlp->pResOmega = potlp->pInfeasRel / potlp->dInfeasRel;
+            potlp->pResOmega = POTLP_MIN(potlp->dblParams[DBL_IPARAM_RESTARTMAX], potlp->pResOmega);
+            potlp->dResOmega = 1.0 / potlp->pResOmega;
+            potlp->cplResOmega = 1.0 / (fabs(pObjVal) + 1.0);
+            potlp->potIterator->potVal = POTLP_INFINITY;
+        }
         
         double pObjBestNew = potlp->pObjBest;
         double dObjBestNew = potlp->dObjBest;
@@ -430,6 +475,13 @@ static void POT_FNAME(potLpObjFImplMonitor)( void *objFData, void *info ) {
                    "Using %d interior point steps to cleanup. \n", barTol, maxBarIter);
             potlp->useIPM = 1;
         }
+        
+        if ( potlp->nIter > 1000 && potlp->kappa / potlp->tau > 1e+06 && !useIPM &&
+             !intInfo && maxBarIter ) {
+            printf("First order method stagnates. Verify feasibility using barrier \n");
+            potlp->useIPM = 1;
+        }
+        
 #endif
         
         /* Interior point solver */
@@ -527,6 +579,11 @@ static void POT_FNAME(LPSolverIObjScale)( potlp_solver *potlp ) {
 //    if ( potlp->lpObjNorm > 1e+08 || potlp->lpRHSNorm > 1e+08 || bcRatio < 1e-03 || bcRatio > 1e+03 ) {
 //        potlp->intParams[INT_PARAM_COEFSCALE] = 1;
 //    }
+    
+    if ( potlp->lpRHSNorm <= 1e-06 && potlp->intParams[INT_PARAM_FORCECPL] ) {
+        printf("[Warning] |b| is small. Unable to force complementarity. \n");
+        potlp->intParams[INT_PARAM_FORCECPL] = 0;
+    }
     
     if ( potlp->intParams[INT_PARAM_COEFSCALE] ) {
 #if 1
@@ -700,6 +757,11 @@ static void POT_FNAME(LPSolverIHeurInitialize)( potlp_solver *potlp ) {
     potlp->pResOmega = 1.0;
     potlp->dResOmega = 1.0;
     potlp->cplResOmega = 1.0;
+    
+    /* If complementarity is forced. Cpl in gradient only corrects accumulated error */
+    if ( potlp->intParams[INT_PARAM_FORCECPL] ) {
+        potlp->cplResOmega = 0.1;
+    }
     
     return;
 }
@@ -912,9 +974,26 @@ extern pot_int POT_FNAME(LPSolverInit)( potlp_solver *potlp, pot_int nCol, pot_i
     
     /* Link data and methods to constraint  */
     potlp->potConstrMat->AMatData = potlp;
-    potlp->potConstrMat->AMatPrepareX = POT_FNAME(potLpConstrMatImplPrepareX);
-    potlp->potConstrMat->AMatProject = POT_FNAME(potLpConstrMatImplProject);
-    potlp->potConstrMat->AMatScalProject = POT_FNAME(potLpConstrMatImplScalProject);
+
+    if ( potlp->intParams[INT_PARAM_FORCECPL] ) {
+        potlp->potConstrMat->AMatPrepareX = POT_FNAME(potLpConstrMatImplPrepareXCpl);
+        potlp->potConstrMat->AMatProject = POT_FNAME(potLpConstrMatImplProjectCpl);
+        potlp->potConstrMat->AMatScalProject = POT_FNAME(potLpConstrMatImplScalProjectCpl);
+    } else {
+        potlp->potConstrMat->AMatPrepareX = POT_FNAME(potLpConstrMatImplPrepareX);
+        potlp->potConstrMat->AMatProject = POT_FNAME(potLpConstrMatImplProject);
+        potlp->potConstrMat->AMatScalProject = POT_FNAME(potLpConstrMatImplScalProject);
+        /* Use scaled curvature computation */
+        potLPSetSclCurv(potlp->potIterator);
+    }
+    
+    POTLP_INIT(potlp->cplProj, double, varDim);
+    
+    if ( !potlp->cplProj ) {
+        retcode = RETCODE_FAILED;
+        goto exit_cleanup;
+    }
+    
     potlp->potConstrMat->AMatMonitor = POT_FNAME(potLpConstrMatImplMonitor);
     
     /* Add callback function */
@@ -1060,6 +1139,8 @@ extern void POT_FNAME(LPSolverClear)( potlp_solver *potlp ) {
     POTLP_FREE(potlp->rowDual);
     
     POTLP_FREE(potlp->scalVals);
+    
+    POTLP_FREE(potlp->cplProj);
     
     potConstrMatDestroy(&potlp->potConstrMat);
     potObjFDestroy(&potlp->potObjF);

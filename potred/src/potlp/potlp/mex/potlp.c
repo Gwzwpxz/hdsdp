@@ -89,6 +89,7 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
     int qpWindow = 32;
     int recordFreq = 10;
     int maxBarIter = 100;
+    int forceCpl = 0;
     int verbose = 1;
     
     double relFeasTol = 1e-04;
@@ -133,6 +134,9 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
         param = mxGetField(params, 0, "maxBarIter");
         if ( param ) { maxBarIter = (int) (*mxGetPr(param)); }
         
+        param = mxGetField(params, 0, "forceCpl");
+        if ( param ) { forceCpl = (int) (*mxGetPr(param)); }
+        
         param = mxGetField(params, 0, "verbose");
         if ( param ) { verbose = (int) (*mxGetPr(param)); }
         
@@ -171,6 +175,7 @@ extern void mexFunction( int nlhs, mxArray *plhs[], int nrhs, const mxArray *prh
     potlp->intParams[INT_PARAM_QPWINDOW] = qpWindow;
     potlp->intParams[INT_PARAM_RECORDFREQ] = recordFreq;
     potlp->intParams[INT_PARAM_MAXBARITER] = maxBarIter;
+    potlp->intParams[INT_PARAM_FORCECPL] = forceCpl;
     
     potlp->dblParams[DBL_PARAM_RELFEASTOL] = relFeasTol;
     potlp->dblParams[DBL_PARAM_RELOPTTOL] = relOptTol;

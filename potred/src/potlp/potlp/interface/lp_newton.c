@@ -26,7 +26,7 @@ static double LpNewtonIRatioTest( pot_int nCol, double *x, double *dx, double *s
                                   double kappa, double dkappa, double tau, double dtau ) {
     
     /* 1 / abs(min([dx./x; ds./s; dkappa / kappa; dtau./tau])) */
-    
+
     double alphaTmp = POTLP_INFINITY;
     double ratio;
     
@@ -154,6 +154,10 @@ extern pot_int LpNewtonOneStep( lp_newton *newton, double *lpObj, double *lpRHS,
                                 double *pRes, double *dRes, double pObjVal, double dObjVal, double spxSize ) {
     
     pot_int retcode = RETCODE_OK;
+    
+    if ( !newton ) {
+        goto exit_cleanup;
+    }
     
     pot_int nCol = newton->nCol;
     pot_int nRow = newton->nRow;

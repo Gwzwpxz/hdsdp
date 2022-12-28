@@ -68,6 +68,11 @@ extern void ConeFilterClear( col_filter *colFilter ) {
 #define FILTER_RATIO  (0.1)
 extern void ConeFilterBuildUp( col_filter *colFilter, double threshVal ) {
     /* Build up filter for the current iterate */
+    
+    if ( !colFilter ) {
+        return;
+    }
+    
     double *xVal = colFilter->coneVals;
     double *coneFilter = colFilter->coneFilter;
     
@@ -95,6 +100,10 @@ extern void ConeFilterBuildUp( col_filter *colFilter, double threshVal ) {
 }
 
 extern void ConeFilterZeroOut( col_filter *colFilter, double *vVal ) {
+    
+    if ( !colFilter ) {
+        return;
+    }
     
     for ( int i = 0; i < colFilter->nActCol; ++i ) {
         vVal[colFilter->coneOrder[i]] = 0.0;

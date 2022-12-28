@@ -77,14 +77,22 @@ extern int potSGMSolve( int nCol, int nEqRow, int nIneqRow, int *eqMatBeg, int *
     
     /* Special treatment for w */
     POTLP_INIT(ubid, int, n);
-    int nub = potSGMIGetUbID(n, ub, ubid);
-    POTLP_INIT(w, double, nub);
-    POTLP_INIT(wbest, double, nub);
-    POTLP_INIT(dw, double, nub);
     
-    if ( !ubid || !w || !wbest || !dw ) {
+    if ( !ubid ) {
         retcode = SGM_RETCODE_FAILED;
         goto exit_cleanup;
+    }
+    
+    int nub = potSGMIGetUbID(n, ub, ubid);
+    
+    if ( nub > 0 ) {
+        POTLP_INIT(w, double, nub);
+        POTLP_INIT(wbest, double, nub);
+        POTLP_INIT(dw, double, nub);
+        if ( !w || !wbest || !dw ) {
+            retcode = SGM_RETCODE_FAILED;
+            goto exit_cleanup;
+        }
     }
     
     /* Initialize */
@@ -99,7 +107,7 @@ extern int potSGMSolve( int nCol, int nEqRow, int nIneqRow, int *eqMatBeg, int *
     
     /* Start iterating */
     int iter = 0;
-    for ( iter = 0; iter < maxIter; ++iter ) {
+    for ( iter = 0; iter < maxIter && fval >= tol; ++iter ) {
         
         /* Kx = K * x - q */
         POTLP_MEMCPY(Kxeq, b, double, meq);
@@ -212,7 +220,9 @@ extern int potSGMSolve( int nCol, int nEqRow, int nIneqRow, int *eqMatBeg, int *
             fbest = fval;
             POTLP_MEMCPY(xbest, x, double, n);
             POTLP_MEMCPY(ybest, y, double, mall);
-            POTLP_MEMCPY(wbest, w, double, nub);
+            if ( nub > 0 ) {
+                POTLP_MEMCPY(wbest, w, double, nub);
+            }
         }
         
         /* Polyak */

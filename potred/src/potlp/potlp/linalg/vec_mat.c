@@ -95,6 +95,9 @@ extern void scal( pot_int *n, double *sa, double *sx, pot_int *incx ) {
         sx[i] = sx[i] * a;
     }
 #else
+    if ( *sa == 1.0 ) {
+        return;
+    }
     dscal(n, sa, sx, incx);
 #endif
     return;
@@ -121,6 +124,9 @@ extern void rscl( pot_int *n, double *sa, double *sx, pot_int *incx ) {
         sx[i] = sx[i] / a;
     }
 #else
+    if ( *sa == 1.0 ) {
+        return;
+    }
     drscl(n, sa, sx, incx);
 #endif
     

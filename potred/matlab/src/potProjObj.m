@@ -21,13 +21,14 @@ if 0
     C = [x_prev'];
     CCTinv = full(inv(C * C'));
 else
-%     C = [A(end, :)];
-    C = [x_prev';
-    A(end, :)];
-    A = A(1:end-1, :);
+    C = [A(end, :)];
+%     C = [x_prev';
+%     A(end, :)];
+%     A = A(1:end-1, :);
     CCTinv = full(inv(C * C'));
     cTx = -C(end, coneidx) * x_prev(coneidx);
     x_prev(yidx) = cTx * C(end, yidx)' / norm(C(end, yidx))^2;
+    x_prev(end) = 1;
 end % End if
 
 ATA = A' * A;
@@ -43,8 +44,8 @@ PPT = PT' * PT;
 P = PT';
 Q = A(mlp + 1:end, mlp+1:end);
 
-betamax = 0.1;
-beta = betamax;
+betamax = 1.0;
+beta = 1.0;
 
 nrmb = norm(blp, 1);
 nrmc = norm(clp, 1);
@@ -56,7 +57,7 @@ fprintf("%5s  %8s  %8s  %8s|  %8s  %8s  %10s  %10s %10s %10s\n",...
 x_cum = x_pres;
 logstar = "";
 nbuffer = 8;
-freq = 1000000;
+freq = 10;
 Xbuff = zeros(n, nbuffer);
 rcount = 0;
 
@@ -72,7 +73,7 @@ for i = 1:maxiter
         AX = A * Xbuff;
         andalp = adsqp(AX, Xbuff(coneidx, :), 0.0 * f);
         xand = Xbuff * andalp;
-        xand(projidx) = ncone * xand(projidx) / sum(xand(projidx));
+%         xand(projidx) = ncone * xand(projidx) / sum(xand(projidx));
         
         fand = 0.5 * norm(A * xand)^2;
         if fand < f
@@ -82,14 +83,13 @@ for i = 1:maxiter
             x_pres = xand;
             x_cum = x_cum .* x_pres;
             
+%             rho = rho * 1.1;
             A = A * diag([ones(ydim, 1); x_pres(coneidx)]);
             ATA = A' * A;
-            
-%             PT = A(mlp + 1:end, 1:mlp);
-%             PPT = PT' * PT;
-%             P = PT';
-%             Q = A(mlp + 1:end, mlp+1:end);
-            C(2, coneidx) = C(2, coneidx) .* x_pres(coneidx)';
+            if size(C, 1) == 2
+                C(1, coneidx) = C(1, coneidx) .* x_pres(coneidx)';
+            end % End if
+            C(end, coneidx) = C(end, coneidx) .* x_pres(coneidx)';
             CCTinv = full(inv(C * C'));
             x_prev(coneidx) = x_prev(coneidx) ./ x_pres(coneidx);
             x_pres(coneidx) = 1.0;
