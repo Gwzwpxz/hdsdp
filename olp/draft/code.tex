@@ -1,0 +1,1729 @@
+\documentclass{article}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,latexsym,theorem}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{graphicx}
+
+ \lstset{
+ columns=fixed, 
+ basicstyle=\footnotesize\ttfamily,   
+ numbers=left,                                       
+ numberstyle=\tiny\color{gray},                      
+ frame=none,                                        
+ backgroundcolor=\color[RGB]{245,245,244},          
+ keywordstyle=\color[RGB]{40,40,255},               
+ numberstyle=\footnotesize\color{darkgray},           
+ commentstyle=\ttfamily\color[RGB]{0,96,96},              
+ stringstyle=\ttfamily\color[RGB]{128,0,0}, 
+ showstringspaces=false,                             
+ language=python,                                       
+}
+
+%\lstset{ %
+%backgroundcolor=\color{white},   % choose the background color
+%basicstyle=\footnotesize\ttfamily,        % size of fonts used for the code
+%columns=fullflexible,
+%breaklines=true,                 % automatic line breaking only at whitespace
+%captionpos=b,                    % sets the caption-position to bottom
+%tabsize=4,
+%commentstyle=\color{mygreen},    % comment style
+%escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+%keywordstyle=\color{blue},       % keyword style
+%stringstyle=\color{mymauve}\ttfamily,     % string literal style
+%frame=shadowbox,
+%rulesepcolor=\color{red!20!green!20!blue!20},
+%% identifierstyle=\color{red},
+%numbers=left, 
+%numberstyle=\tiny,
+%% escapeinside=' ',
+%xleftmargin=2em,
+%xrightmargin=2em, 
+%aboveskip=1em
+%}
+
+
+\geometry{a4paper,scale=0.89}
+
+\setlength{\parindent}{0pt}
+%%%%%%%%%% Start TeXmacs macros
+\newcommand{\assign}{:=}
+\newcommand{\cdummy}{\cdot}
+\newcommand{\tmem}[1]{{\em #1\/}}
+\newcommand{\tmop}[1]{\ensuremath{\operatorname{#1}}}
+\newenvironment{proof}{\noindent\textbf{Proof\ }}{\hspace*{\fill}$\Box$\medskip}
+{\theorembodyfont{\rmfamily\small}\newtheorem{problem}{Problem}}
+\newcommand{\tmstrong}[1]{\textbf{#1}}
+\newcommand{\tmverbatim}[1]{{\ttfamily{#1}}}
+%%%%%%%%%% End TeXmacs macros
+
+\begin{document}
+
+\title{Boosting Method in Approximately Solving Linear Programming with Fast Online Algorithm \\\vspace{10pt} Code Instructions}
+
+\maketitle
+
+This document presents the implementations of the Boosted Online Algorithm and where to locate them in the reference code.
+
+\section{Code Overview}
+
+The code w.r.t. our online algorithm is primarily divided into three sections
+\begin{itemize}
+  \item \tmverbatim{C} implementation of primary Boosting Online Algorithm
+  
+  The C implementation demonstrates the efficiency of our algorithm when
+  applied in practice
+  
+  \item \tmverbatim{MATLAB} implementation of variants of online algorithm
+  
+  The \tmverbatim{MATLAB} implementation serves as the fundamental platform to
+  carry out most of the numerical experiments
+  
+  \item Python implementation of Column Generation (Sifting) framework based
+  on \tmverbatim{IBM ILOG CPLEX 12.1.0}
+  
+  A rough self-implemented CG framework is implemented in Python combined with
+  the \tmverbatim{CPLEX} Solver Interface
+\end{itemize}
+One can locate the \tmverbatim{C} and \tmverbatim{MATLAB} implementation of
+the online algorithm in the \tmverbatim{src} directory. The types of actual
+implemented algorithms are beyond those presented in our main paper and can be
+ignored. For the CG implementation, please refer to
+\tmverbatim{test/cg/cgCplex.py}.
+
+\section{Experiments}
+
+We provide code to reproduce our numerical experiments as were presented in
+our paper. The numerical experiments are mostly conducted in
+\tmverbatim{MATLAB} and \tmverbatim{Gurobi 9.1.0} solver is required. One can
+refer to the \tmverbatim{test/online} directory to reproduce the experiment
+result and please following the instructions below.
+
+\subsection{Boosted Online Algorithm}
+
+\begin{itemize}
+  \item Running Time Experiment
+  
+  To reproduce the running time of our algorithms, one may change directory to
+  \tmverbatim{test/CTime} directory where the \tmverbatim{C} source code is
+  available for compilation. One can compile the code directly or, with
+  \tmverbatim{gcc Tool Chain} available, run \tmverbatim{.\textbackslash
+  test.sh [1 10 1000]} to reproduce the result with boosting parameter $K \in
+  \{ 1, 10, 1000 \}$.
+  
+  \item Naive Boosted Online Algorithm
+  
+  To reproduce the performance of the projected sub-gradient-based algorithm,
+  one may change directory to \tmverbatim{test/NaiveTest} and run
+  \tmverbatim{Naive\_dense.m} or \tmverbatim{Naive\_sparse.m} for dense/sparse
+  experiments respectively. Please also ensure that the scripts under
+  directory \tmverbatim{utils} are added to the \tmverbatim{MATLAB} search
+  path.
+  
+  {\tmstrong{Note}}: code in this section also solves the Integer Programming
+  problem to see the performance and may take a long time. To shut down such
+  procedure one may let \tmverbatim{SOLVEMIP = false} at the start of the
+  experiment scripts.
+  
+  \item Boosted Online Algorithm with Mirror Descent/Minibatch
+  
+  To reproduce the performance of the mirror descent-based algorithm, one may
+  change directory to \tmverbatim{test/MirrorBatch} and run two the scripts
+  \tmverbatim{MirrorBatch\_dense.m}, \tmverbatim{MirrorBatch\_sparse.m}.
+  
+  \item Boosted Online Algorithm for General MIPs
+  
+  To reproduce the performance of the algorithm for general MIPs with $x_i \in
+  [M]$, one may change directory to \tmverbatim{test/GeneralTest} and run two
+  the scripts \tmverbatim{General\_dense.m}, \tmverbatim{General\_sparse.m}.
+  Also, one can let \tmverbatim{SOLVEMIP = false} to shut down solution of
+  MIPs.
+\end{itemize}
+
+\subsection{Column Generation/Sifting}
+
+The column generation/sifting procedure can be used not only for reproducing
+the experiments, but also for all the LPs taking form of Multi-knapsack
+problems. To reproduce our experiments, one may download the \tmverbatim{.mps} model
+files from \tmverbatim{MIPLIB 2017} and initialize a \tmverbatim{Sifting}
+object either by
+
+\begin{lstlisting}
+	cgsolver = CplexSifting("model.mps")
+\end{lstlisting}
+
+or
+\begin{lstlisting}
+	cgsolver = CplexSifting(A, b, c, ub, senses)
+\end{lstlisting}
+
+
+if the data for the problem is available as \tmverbatim{Numpy NDArrays}. Then
+one can adjust parameters of our framework by the methods provided (references
+are avaible from the code) and initiate the \tmverbatim{Sifting} procedure by
+
+\begin{lstlisting}
+	cgsolver.ColGen()
+\end{lstlisting}
+
+{\tmstrong{Note:}} Since \tmverbatim{Python} implementation our online
+algorithm is generally too slow for practical use, we provide
+\tmverbatim{CplexSifting.set\_init\_cols()} method to import the initial
+restricted master problem from the outer environment.
+
+\section{Experiment Report}
+
+A detailed experiment report containing all experiments is available at \tmverbatim{doc/OnlineReport.pdf}.
+
+\newpage
+\appendix
+
+\section{Code Reference}
+
+We present the main code in the appendix for reference.
+
+ \lstset{
+ columns=fixed, 
+ basicstyle=\footnotesize\ttfamily,   
+ numbers=left,                                       
+ numberstyle=\tiny\color{gray},                      
+ frame=none,                                        
+ backgroundcolor=\color[RGB]{245,245,244},          
+ keywordstyle=\color[RGB]{40,40,255},               
+ numberstyle=\footnotesize\color{darkgray},           
+ commentstyle=\ttfamily\color[RGB]{0,96,96},              
+ stringstyle=\ttfamily\color[RGB]{128,0,0}, 
+ showstringspaces=false,                             
+ language=c,                                       
+}
+\subsection{Sparse Boosted Online Algorithm in C}
+
+\begin{lstlisting}
+    #include "OnlineLP.h"
+    
+    double OnlineLPDense(int m, 
+     			 int n, 
+     			 double *A, 
+     			 double *b, 
+     			 double *c, 
+     			 double *x, 
+     			 int Adaptive) {
+    
+    double time = 0.0;
+    clock_t start = clock();
+    
+    // Get inequality RHS vector b and copy it to resource
+    double *resource = NULL;
+    resource = (double *) malloc(m * sizeof(double));
+    
+    // Define and initialize vector d: d = b / n
+    double *d = NULL;
+    d = (double *) malloc(m * sizeof(double));
+    
+    for (int i = 0; i < m; ++i) {
+        d[i] = b[i] / n;
+        resource[i] = b[i];
+    }
+    
+    // Initialize stepsize
+    double step = 1 / sqrt(n);
+    
+    
+    // Initialize primal parameter
+    for (int i = 0; i < n; ++i) {
+        x[i] = 0.0;
+    }
+    
+    // Initialize dual parameter
+    double *y = (double *) malloc(sizeof(double) * m);
+    
+    for (int i = 0; i < m; ++i) {
+        y[i] = 0.0;
+    }
+    
+    // Initialize auxiliary variable
+    double *aa = (double *) malloc(sizeof(double) * m);
+    
+    // Start online algorithm
+    for (int i = 0; i < n; ++i) {
+        
+        for (int j = 0; j < m; ++j) {
+            aa[j] = A[j * n + i];
+        }
+        
+        if (Adaptive) {
+            step = 1 / sqrt(i + 1);
+        }
+        
+        x[i] = 1.0;
+        double r = c[i];
+        
+        for (int j = 0; j < m; ++j) {
+            r -= y[j] * aa[j];
+            
+            if (r <= 0) {
+                x[i] = 0.0;
+                break;
+            }
+        }
+        
+        for (int j = 0; j < m; ++j) {
+            y[j] += step * (aa[j] * x[i] - d[j]);
+        }
+        
+        
+        if (x[i]) {
+            
+            for (int j = 0; j < m; ++j) {
+                resource[j] -= aa[j];
+                
+                if (resource[j] <= 0) {
+                    
+                    OLLP_FREE(y);
+                    OLLP_FREE(aa);
+                    OLLP_FREE(resource);
+                    OLLP_FREE(d);
+                    clock_t end = clock();
+                    time = (double) (end - start) / CLOCKS_PER_SEC;
+                    
+                    return time;
+                    
+                }
+            }
+        }
+    }
+    
+    clock_t end = clock();
+    time = (double) (end - start);
+    OLLP_FREE(aa);
+    OLLP_FREE(y);
+    OLLP_FREE(resource);
+    OLLP_FREE(d);
+    
+    return time;
+}\end{lstlisting}
+
+\subsection{Dense Boosted Online Algorithm in C}
+
+\begin{lstlisting}
+
+    #include "OnlineLP.h"
+    
+    double OnlineLP(int m, 
+    	 	    int n, 
+    	 	    int *Ap, 
+    	 	    int *Ai, 
+    	 	    double *Ax, 
+    	 	    double *b, 
+    	 	    double *c, 
+    	 	    int adaptive,
+    	 	    double *x) {
+    
+    double time = 0.0;
+    clock_t start = clock();
+    
+    int nUpdate = 0;
+    int *lastUpdate = NULL;
+    lastUpdate = (int *) malloc(m * sizeof(int));
+    
+    for (int i = 0; i < m; ++i) {
+        lastUpdate[i] = 0;
+    }
+    
+    // Get inequality RHS vector b and copy it to resource
+    double *resource = NULL;
+    resource = (double *) malloc(m * sizeof(double));
+    
+    // Define and initialize vector d: d = b / n
+    double *d = NULL;
+    d = (double *) malloc(m * sizeof(double));
+    
+    for (int i = 0; i < m; ++i) {
+        d[i] = b[i] / n;
+        resource[i] = b[i];
+    }
+    
+    // Initialize stepsize
+    double step = 1 / sqrt(n);
+    
+    for (int i = 0; i < n; ++i) {
+        x[i] = 0.0;
+    }
+    
+    double *y = (double *) malloc(sizeof(double) * m);
+    
+    for (int i = 0; i < m; ++i) {
+        y[i] = 0.0;
+    }
+    
+    
+    /* Start computation routine */
+    double xk = 0;
+
+    /* Start inner loop */
+    for (int i = 0; i < n; ++i) {
+
+        if (adaptive) {
+            step = 1 / sqrt((i + 1));
+        }
+
+        xk = 0.0;
+
+        for (int q = Ap[i]; q < Ap[i + 1]; ++q) {
+            int s = Ai[q];
+            double a = Ax[q];
+            /* Update y[s] till this point */
+            y[s] = y[s] - step * d[s] * (nUpdate - lastUpdate[s]);
+            y[s] = OLLP_MAX(y[s], 0.0);
+            lastUpdate[s] = nUpdate;
+
+            /* Compute xk */
+            xk = xk + a * y[s];
+        }
+
+        xk = (c[i] > xk);
+        x[i] = xk;
+
+        // Update the dual solution: y=max(0,y+step*(xk*aa-d));
+        nUpdate++;
+        if (xk) {
+            for (int q = Ap[i]; q < Ap[i + 1]; ++q) {
+                int s = Ai[q];
+                double a = Ax[q];
+                y[s] = y[s] + step * (a - d[s]);
+                y[s] = OLLP_MAX(y[s], 0.0);
+                lastUpdate[s] = nUpdate;
+            }
+
+            // Update resource
+            for (int j = Ap[i]; j < Ap[i + 1]; ++j) {
+                resource[Ai[j]] -= Ax[j];
+
+                if (resource[Ai[j]] < 0) {
+                    x[i] = 0.0;
+                    clock_t end = clock();
+                    time = (double) (end - start) / CLOCKS_PER_SEC;
+                    OLLP_FREE(y);
+                    OLLP_FREE(lastUpdate);
+                    OLLP_FREE(resource);
+                    OLLP_FREE(d);
+                    return time;
+                }
+            }
+        }
+    }
+    
+    clock_t end = clock();
+    time = (double) (end - start);
+    
+    OLLP_FREE(y);
+    OLLP_FREE(lastUpdate);
+    OLLP_FREE(resource);
+    OLLP_FREE(d);
+    return time;
+}
+
+\end{lstlisting}
+
+
+\subsection{Projected Sub-gradient/Mirror Descent Algorithm in MATLAB}
+
+ \lstset{
+ columns=fixed, 
+ basicstyle=\footnotesize\ttfamily,   
+ numbers=left,                                       
+ numberstyle=\tiny\color{gray},                      
+ frame=none,                                        
+ backgroundcolor=\color[RGB]{245,245,244},          
+ keywordstyle=\color[RGB]{40,40,255},               
+ numberstyle=\footnotesize\color{darkgray},           
+ commentstyle=\ttfamily\color[RGB]{0,96,96},              
+ stringstyle=\ttfamily\color[RGB]{128,0,0}, 
+ showstringspaces=false,                             
+ language=matlab,                                       
+}
+
+\begin{lstlisting}
+function [x, y] = OnlineSubGrad(A, b, c, K, CheckInnerFeas, Metric, Momentum)
+% This function implements sub-gradient based online algorithm
+
+% Parameter Adaptive is not in use for now
+Adaptive = 0;
+
+% Get size of data array
+[m, n] = size(A);
+
+% Initialize auxiliary resources
+d = b / n;
+
+% Set stepsize
+step = 1 / sqrt(K * n);
+
+% Initilize primal and dual solutions
+x = zeros(n, 1);
+
+% Initialize the dual variable based one metric used
+if Metric == "L2"
+    y = zeros(m, 1);
+else
+    % Initialize parameters for simplex projection
+    y = ones(m, 1) / exp(1);
+    delta = mean(c) / min(d);
+end % End if
+
+% Initialize momentum parameter
+y_pre = y;
+
+% Set remaining inventory
+br = K * b;
+
+% Start the outer loop
+for k = 1:K
+    
+    % Random permutation
+    p = randperm(n);
+    
+    % Start the inner loop
+    for i = 1 : n
+        ii = p(i);
+        aa = A(:,ii);
+        
+        % Set primal increment
+        infeas = c(ii) - aa' * y;
+        xk = (infeas >= 0);
+        infeas = max(infeas, 0);
+        
+        % step = 1 / sqrt((k - 1) * n + i);
+        
+        % Update the dual soluton
+        
+        % Use alternative descent stepsizes
+        subgrad = (d - xk * aa);
+        
+        if Metric == "L2"
+            y = max(0, y + Momentum * (y - y_pre));
+            y_pre = y;
+            y = max(0, y - step * subgrad);
+        else
+            y = max(0, y + Momentum * (y - y_pre));
+            y_pre = y;
+            y = y.*exp(- step * subgrad);
+            
+            % Do projection back to the simplex
+            if (sum(y) > delta)
+                % Projection
+                y = y / sum(y) * delta;
+            end % End if
+                
+        end % End if
+        
+        % Check feasibility of inner iteration and update
+        if (~ CheckInnerFeas) || (min(br - xk * aa) >= 0)
+            br = br - xk * aa;
+            x(ii) = x(ii) + xk;
+        end % End if
+        
+        if Adaptive && (i * k < n * K)
+            d = br / (n * K - i * k);
+        end % End if
+        
+    end % End for
+end % End for
+
+x = x / K;
+end % End function
+
+\end{lstlisting}
+
+\subsection{Minibatch Based Algorithm in MATLAB}
+
+
+\begin{lstlisting}
+function [x, y] = OnlineBatch(A, b, c, K, CheckInnerFeas, Metric, Momentum, Batch)
+% This function implements sub-gradient based online algorithm using
+% mini-batch
+
+% Parameter Adaptive is not in use for now
+Adaptive = 0;
+
+% Get size of data array
+[m, n] = size(A);
+
+% Initialize auxiliary resources
+d = b / n;
+
+% Set stepsize
+step = 1 / sqrt(K * n);
+
+% Initilize primal and dual solutions
+x = zeros(n, 1);
+
+% Initialize the dual variable based one metric used
+if Metric == "L2"
+    y = zeros(m, 1);
+else
+    % Initialize parameters for simplex projection
+    y = ones(m, 1) / exp(1);
+    delta = mean(c) / min(d);
+end % End if
+
+% Initialize momentum parameter
+y_pre = y;
+
+% Set remaining inventory
+br = K * b;
+
+% Set number of iterations
+iter = ceil(n / Batch);
+
+% Start the outer loop
+for k = 1:K
+    
+    % Random permutation
+    p = randperm(n);
+    
+    % Start the inner loop
+    for i = 1 : iter
+        if i == iter
+            ii = p(((i - 1) * Batch + 1):n);
+            bs = n - (iter - 1) * Batch;
+        else
+            ii = p((i - 1) * Batch + 1 : i * Batch);
+            bs = Batch;
+        end % End if
+        
+        aa = A(:,ii);
+        
+        % Set primal increment
+        infeas = c(ii) - aa' * y;
+        xk = (infeas >= 0);
+        infeas = max(infeas, 0);
+        
+        step = 1 / sqrt((k - 1) * n + i);
+        
+        % Update the dual soluton
+        if Metric == "L2"
+            y = max(0, y + Momentum * (y - y_pre));
+            y_pre = y;
+            y = max(0, y - step * subgrad);
+        else
+            y = max(0, y + Momentum * (y - y_pre));
+            y_pre = y;
+            y = y.*exp(- step * subgrad);
+            
+            % Do projection back to the simplex
+            if (sum(y) > delta)
+                % Projection
+                y = y / sum(y) * delta;
+            end % End if
+            
+        end % End if
+        
+        % Check feasibility of inner iteration and update
+        if (~ CheckInnerFeas)  || (min(br - aa * xk) >= 0)
+            br = br - aa * xk;
+            x(ii) = x(ii) + xk;
+        else
+            for j = randperm(bs)
+                s = ii(j);
+                if (min(br - aa(:, j) * xk(j) >= 0))
+                    x(s) = x(s) + xk(j);
+                    br = br - aa(:, j);
+                end % End if
+                
+            end % End for
+            
+        end % End if
+        % End if
+        
+        if Adaptive && (i * k < n * K)
+            d = br / (n * K - i * k);
+        end % End if
+        
+    end % End for
+end % End for
+
+x = x / K;
+end % End function
+
+\end{lstlisting}
+
+
+ \lstset{ 
+ basicstyle=\footnotesize\ttfamily,                       
+ frame=none,                                        
+ backgroundcolor=\color[RGB]{245,245,244},          
+ keywordstyle=\color[RGB]{40,40,255},               
+ commentstyle=\ttfamily\color[RGB]{0,96,96},              
+ stringstyle=\ttfamily\color[RGB]{128,0,0}, 
+ showstringspaces=false,                             
+ language=python,                                       
+}
+
+\subsection{CPLEX-Based Sifting}
+
+\begin{lstlisting}
+import cplex
+import numpy as np
+import time
+from scipy import sparse
+from scipy.sparse.linalg import norm as spnorm
+
+
+class CplexSifting(object):
+
+    def __init__(self, A, b, c, ub, senses, filename):
+
+        # Stores the original Cplex model instance
+        self.__ORIGINAL_MODEL = cplex.Cplex()
+
+        # Stores the current restricted master problem (working problem)
+        self.__RMP_MODEL = cplex.Cplex()
+
+        # Initialize callback functions
+        self.__init_cols = None
+        self.__add_cols = None
+        self.__drop_cols = None
+
+        # Initialize problem data
+        self.__A = None
+        self.__auxA = None
+        self.__b = None
+        self.__c = None
+        self.__ub = None
+
+        # Specially we note that "E", "L" "G" are 
+        # respectively used to denote three types of constraints
+        self.__ROW_SENSES = None
+
+        # Incumbent objective value
+        self.__INCUMBENT_OBJ = 0.0
+
+        # Incumbent dual solution
+        self.__INCUMBENT_DUAL_SOL = None
+
+        # Smoothed dual solution, computed recursively by 
+        # pi(s)_{t + 1} = (1 - alpha) * pi_{t + 1} + alpha * pi(s)_{t}
+        self.__SMOOTH_DUAL_SOL = None
+
+        # Iteration time, recorded as a list with first element being time of online algorithm
+        self.__SOL_TIME = []
+
+        # Method for solving working problem, default is 0: cplex default selection
+        self.__SUBPROBLEM_METHOD = self.__ORIGINAL_MODEL.parameters.lpmethod.values.auto
+
+        # Parameters related dual stabilization via BoxStep and variations
+        # Note that the following parameter setup is equivalent to the original M setup
+
+        # Big M is a sufficiently large number << cplex.infinity
+        self.__BIG_M = 1e+10
+        self.__EPSILON = cplex.infinity
+        self.__PENALTY_EQ_POS = self.__BIG_M
+        self.__PENALTY_EQ_NEG = self.__BIG_M
+        self.__PENALTY_GEQ_POS = self.__BIG_M
+        self.__PENALTY_GEQ_NEG = self.__BIG_M
+        self.__PENALTY_LEQ_POS = self.__BIG_M
+        self.__PENALTY_LEQ_NEG = self.__BIG_M
+
+        # Total number of working problems solved so far 
+        # (also implies number of sifting iterations)
+        self._ITER_COUNT = 0
+
+        # Other arrays related to online algorithm
+        self.__IS_ROW_EQUAL = None
+        self.__ONLINE_SOL = None
+        self.__ONLINE_DUAL = None
+
+        # Sifting Parameters
+
+        # Maximum number of sifting iterations to be performed
+        self.__MAX_SIFTING_ITER = 30
+
+        # Online algorithm parameters
+        self.__ONLINE_BOOSTING_PARAM = 3
+
+        # RMP(Working problem size) parameters
+
+        # Whether initial columns are already provided
+        self.__IS_INCUMBENT_INITIAL_EXIST = False
+
+        # Number of initial columns for the RMP
+        self.__INITIAL_RMP_SIZE = 12000
+
+        # Maximum size for RMP
+        self.__MAX_RMP_SIZE = 500000
+
+        # Number of columns added to the current RMP (if any)
+        self.__NUM_COL_IN = 250000
+
+        # Number of columns to remove from current RMP (if any)
+        self.__NUM_COL_OUT = 10000
+
+        # Whether to allow barrier method when solving the sifting sub-problem
+        self.__ALLOW_BARRIER = True
+
+        # Column pricing parameters
+        # Standard pricing method
+        self.__PRICING_METHOD_STANDARD_PRICE = 101
+        # Lambda pricing by Bixby
+        self.__PRICING_METHOD_LAMBDA_PRICE = 102
+        # Steepest-edge pricing by Forrest
+        self.__PRICING_METHOD_STEEPEST_PRICE = 103
+
+        # Iteration status parameters
+
+        # Due to the criterion for removing columns from the current RMP, we tend to 
+        # let columns not in RMP or at upper bound hold very small values to ensure 
+        # they will not be selected in the purging process
+
+        # Status defined for columns that just entered the RMP. If value is set to be
+        # -k, this will imply that only after at least 4 sifting iterations can the column be
+        # discarded
+
+        self.__COLUMN_STATUS_JUST_IN_RMP = -3
+
+        # Status defined for columns not in RMP at current iterate
+        self.__COLUMN_STATUS_NOT_IN_RMP = -101
+
+        # Status defined for columns in RMP but at upper bound whose removal will 
+        # change current feasibility
+        self.__COLUMN_STATUS_AT_UPPER_BOUND = -102
+
+        # Status defined for columns in RMP and in basis
+        self.__COLUMN_STATUS_IN_BASIS = -103
+
+        # Default pricing method if standard negative reduced cost pricing by Dantzig
+        self.__PRICING_METHOD = self.__PRICING_METHOD_STANDARD_PRICE
+
+        # Set initial column selection method
+        self.__INITIAL_RMP_METHOD_RAND = 104
+        self.__INITIAL_RMP_METHOD_ONLINE = 105
+        self.__INITIAL_RMP_METHOD_GREEDY = 106
+
+        # Default method is online algorithm
+        self.__INITIAL_RMP_METHOD = self.__INITIAL_RMP_METHOD_ONLINE
+
+        # Set dual smoothing coefficient
+        # The coefficient will correct the dual variable each step to produce more stability
+        self.__DUAL_SMOOTHING_COEF = 0.05
+
+        # Read data from ".mps" format files
+        # This method is very slow in practice and it is suggested that one should
+        # directly use matrix information for initialization
+
+        if filename:
+            print("Reading original model from {0} ...".format(filename))
+            self.__ORIGINAL_MODEL.read(filename)
+
+            print("Extracting model information: constraint matrix A")
+
+            # This part has to be rewritten since the SparsePair returned by Cplex cannot 
+            # get directly used
+
+            Ac = []
+            Ar = []
+            Aval = []
+
+            # Store problem size temporarily
+            m = self.__ORIGINAL_MODEL.linear_constraints.get_num()
+            n = self.__ORIGINAL_MODEL.variables.get_num()
+
+            for i in range(m):
+                rowLinExp = self.__ORIGINAL_MODEL.linear_constraints.get_rows(i).unpack()
+                idx = rowLinExp[0]
+                vals = rowLinExp[1]
+                nnz = len(idx)
+                Ac = Ac + idx
+                Ar = Ar + [i] * nnz
+                Aval = Aval + vals
+                if i % 100 == 0:
+                    print("Extracted {0} out of {1} rows ...".format(i, m))
+
+            A = sparse.coo_matrix((Aval, (Ar, Ac)), shape=(m, n))
+            A = A.tocsc()
+
+            print("Extracting model information: right hand side vector b")
+            self.__b = np.asarray(self.__ORIGINAL_MODEL.linear_constraints.get_rhs())
+
+            print("Extracting model information: sense information")
+            self.__ROW_SENSES = self.__ORIGINAL_MODEL.linear_constraints.get_senses()
+
+            print("Extracting model information: linear objective coefficient")
+            self.__c = np.asarray(self.__ORIGINAL_MODEL.objective.get_linear())
+
+            print("Extracting model information: variable upperbounds")
+            self.__ub = np.asarray(self.__ORIGINAL_MODEL.variables.get_upper_bounds())
+
+        # Directly initialize problem with data passed
+        if not filename:
+            self.__A = A
+            self.__b = b.squeeze()
+            self.__c = c.squeeze()
+            self.__ub = ub.squeeze()
+            self.__ROW_SENSES = senses
+
+            self.__A = self.__A.tocsc()
+            Abeg = self.__A.indptr
+            Aind = self.__A.indices
+            Aval = self.__A.data
+            Acnt = Abeg[1:] - Abeg[:-1]
+            Abeg = Abeg[:-1]
+
+            m = A.shape[0]
+            n = A.shape[1]
+
+            print("Setting model from input data")
+
+            self.__ORIGINAL_MODEL.copylp(numcols=n,
+                                         numrows=m,
+                                         objsense=self.__ORIGINAL_MODEL.objective.sense.minimize,
+                                         obj=self.__c,
+                                         rhs=self.__b,
+                                         senses=self.__ROW_SENSES,
+                                         matbeg=Abeg.tolist(),
+                                         matcnt=Acnt.tolist(),
+                                         matind=Aind.tolist(),
+                                         matval=Aval,
+                                         lb=[0.0] * n,
+                                         ub=self.__ub,
+                                         colnames=None,
+                                         rownames=None)
+
+            print("Model setup complete")
+
+        # Initialize constraint matrix size
+        self.__NROW = A.shape[0]
+        self.__NCOL = A.shape[1]
+
+        # Initialize auxiliary matrix
+        self.__auxA = sparse.hstack([sparse.identity(self.__NROW),
+        			    -sparse.identity(self.__NROW)]).tocsc()
+
+        # Initialize auxiliary array for determination of constraint type
+        self.__IS_ROW_EQUAL = np.asarray([self.__ROW_SENSES[i] == "E" for i in range(self.__NROW)])
+
+        # Get constraint type and corresponding row indices for stabilization method
+        sense_list = np.asarray(list(self.__ROW_SENSES))
+        self.__ROW_EQ_IDX = np.where(sense_list == "E")[0].tolist()
+        self.__ROW_LEQ_IDX = np.where(sense_list == "L")[0].tolist()
+        self.__ROW_GEQ_IDX = np.where(sense_list == "G")[0].tolist()
+
+        # Initialize basis information
+        # The following arrays are critical for the sifting procedure as they keep the 
+        # detailed status of column pool
+
+        # This is a list of size 2 * m and records the information about 
+        # basis status of auxiliary variables. 
+        # It is initialized by [0.0, ..., 0.0] and represents the state that 
+        # all auxiliary variables equal 0
+        self.__CURRENT_AUX_COL_BASIS_STATUS = [self.__ORIGINAL_MODEL.start.status.at_lower_bound] * 
+        					2 * self.__NROW
+
+        # This is a list of size n and records the current basis status of each variable. 
+        # Note that for variables not in RMP, we also set the status to be at lower bound 
+        # and status for all columns in RMP will be updated once an RMP is solved. 
+        # Note that we never allow columns of state "at upper bound" to leave basis since 
+        # this will impact problem feasibility
+        self.__CURRENT_ORIGINAL_COL_BASIS_STATUS = [self.__ORIGINAL_MODEL.start.status.at_lower_bound] * 
+        					    self.__NCOL
+
+        # This is a list of size m for recording information of dual basis status and can be maintained 
+        # by simple update through solution of RMPs.
+        self.__CURRENT_ROW_BASIS_STATUS = [self.__ORIGINAL_MODEL.start.status.at_lower_bound] *
+        				   self.__NROW
+
+        # This is a list of size RMP containing columns indices of original columns
+        # that are currently in basis
+        self.__RMP_POOL = []
+
+        # This is a list of size n containing number of iterations for each column that has been 
+        # in RMP but not in basis
+        # This array is used for column purging to remove columns when problem size is too large
+        self.__ITER_NOT_IN_BASIS = [self.__COLUMN_STATUS_NOT_IN_RMP] * self.__NCOL
+
+        print("Sifting framework initialization complete")
+        print("***************** Model Information **************")
+        print("* Number of constraints: {0} ".format(self.__NROW))
+        print("* Number of variables: {0}".format(self.__NCOL))
+        print("* Model lower bound: 0   Maximum upperbound: {0}".format(np.max(self.__ub)))
+        print("**************************************************")
+
+    # Online algorithm
+    @staticmethod
+    def _sparse_online_LP(A, b, c, is_row_equal, K, b_sense):
+
+        # Extract shape information
+        m = A.shape[0]
+        n = A.shape[1]
+        is_constr_exist = not (m == 0)
+
+        # Extract component arrays
+        if is_constr_exist:
+            A_p = A.indptr
+            A_i = A.indices
+            A_x = A.data
+            d = b / n
+        else:
+            raise Warning("No constraint exists")
+
+        # Initialize stepsize
+        step = 1 / np.sqrt(n * K)
+
+        # Initialize update information
+        last_update = np.zeros(m)
+        nUpdate = 0
+
+        # Initialize solution array
+        x = np.zeros(n)
+
+        if b_sense == 0:
+            y = np.ones(m)
+        else:
+            y = np.zeros(m)
+
+        for k in range(K):
+            p = np.random.permutation(n)
+            for i in range(n):
+                j = p[i]
+                xk = 0
+                if is_constr_exist:
+                    data_idx_beg = A_p[j]
+                    data_idx_end = A_p[j + 1]
+                    row_idx = A_i[data_idx_beg:data_idx_end]
+                    y[row_idx] = np.subtract(y[row_idx],
+                                             step * np.multiply(d[row_idx], 
+                                             (nUpdate - last_update[row_idx])))
+                    ineq_row_idx = row_idx[np.where(is_row_equal[row_idx] == 0)[0]]
+                    y[ineq_row_idx] = np.maximum(0, y[ineq_row_idx])
+                    last_update[row_idx] = nUpdate
+                    xk += np.dot(A_x[data_idx_beg:data_idx_end], y[row_idx])
+
+                xk = (c[j] >= xk)
+
+                nUpdate += 1
+
+                if xk and is_constr_exist:
+                    data_idx_beg = A_p[j]
+                    data_idx_end = A_p[j + 1]
+                    row_idx = A_i[data_idx_beg:data_idx_end]
+                    y[row_idx] = np.add(y[row_idx], step * np.subtract(A_x[data_idx_beg:data_idx_end], 
+                    			d[row_idx]))
+                    ineq_row_idx = row_idx[np.where(is_row_equal[row_idx] == 0)[0]]
+                    y[ineq_row_idx] = np.maximum(0, y[ineq_row_idx])
+                    last_update[row_idx] = nUpdate
+
+                x[j] += xk
+
+        return x / K, y
+
+    # This method solves the RMP given basis status and RMP column indices and is the most critical 
+    # part for the sifting framework. After solving the RMP, information will be extracted to update 
+    # related information
+    def __sub_lp_solve(self, cols, mode):
+
+        # Get problem size
+        m = self.__NROW
+        rmp_size = len(cols)
+
+        # Select corresponding columns
+        Asub = self.__A[:, cols]
+        csub = self.__c[cols]
+        ubsub = self.__ub[cols]
+
+        # Create Cplex problem instance
+        self.__RMP_MODEL = cplex.Cplex()
+
+        # Add auxiliary part
+        # Note that we need to note that the coefficients as penalties in the objective 
+        # function are given in different manners when the constraint types vary
+
+        # Initialize penalties for the positive part
+        penalty_pos = np.ones(m) * self.__BIG_M
+        penalty_pos[self.__ROW_EQ_IDX] = self.__PENALTY_EQ_POS
+        penalty_pos[self.__ROW_GEQ_IDX] = self.__PENALTY_GEQ_POS
+        penalty_pos[self.__ROW_LEQ_IDX] = self.__PENALTY_LEQ_POS
+
+        # Initialize penalties for the negative part
+        penalty_neg = np.ones(m) * self.__BIG_M
+        penalty_neg[self.__ROW_EQ_IDX] = self.__PENALTY_EQ_NEG
+        penalty_neg[self.__ROW_GEQ_IDX] = self.__PENALTY_GEQ_NEG
+        penalty_neg[self.__ROW_LEQ_IDX] = self.__PENALTY_LEQ_NEG
+
+        # Set extended objective value c = (delta +, delta -, c)
+        extendc = np.concatenate([penalty_pos, penalty_neg, csub], axis=0)
+        assert (extendc.shape == (2 * m + rmp_size,))
+
+        # Set bound for artificial variables
+        extendub = np.concatenate([np.ones(2 * m) * self.__EPSILON, ubsub], axis=0)
+        assert (extendub.shape == (2 * m + rmp_size,))
+
+        # Set extended constraint matrix
+        extendA = sparse.hstack([self.__auxA, Asub])
+
+        # Express constraint matrix in CSC format
+        Abeg = extendA.indptr
+        Aind = extendA.indices
+        Aval = extendA.data
+        Acnt = Abeg[1:] - Abeg[:-1]
+        Abeg = Abeg[:-1]
+
+        ext_n_row = extendA.shape[0]
+        ext_n_col = extendA.shape[1]
+
+        assert (ext_n_row == m)
+        assert (ext_n_col == rmp_size + 2 * m)
+
+        # Construct extended model
+        self.__RMP_MODEL.copylp(numcols=ext_n_col,
+                                numrows=ext_n_row,
+                                objsense=self.__RMP_MODEL.objective.sense.minimize,
+                                obj=extendc, rhs=self.__b,
+                                senses=self.__ROW_SENSES,
+                                matbeg=Abeg.tolist(),
+                                matcnt=Acnt.tolist(),
+                                matind=Aind.tolist(),
+                                matval=Aval,
+                                lb=[0.0] * ext_n_col,
+                                ub=extendub,
+                                colnames=None,
+                                rownames=None)
+
+        # If sub-problem is in latter iterations
+        if mode == "L":
+            # Concatenate auxiliary basis status and original column basis status
+            # Note that the function input cols denotes the set of column indices and we need to
+            # extract corresponding columns by taking the basis status from the array
+            # self.__CURRENT_ORIGINAL_BASIS_STATUS
+            col_basis = self.__CURRENT_AUX_COL_BASIS_STATUS +
+             [self.__CURRENT_ORIGINAL_COL_BASIS_STATUS[i] for i in
+                                                               cols]
+
+            # Row basis is consistently updated and recorded
+            row_basis = [self.__CURRENT_ROW_BASIS_STATUS[i] for i in range(m)]
+            self.__RMP_MODEL.start.set_start(col_basis, row_basis, [], [], [], [])
+
+        # Set the method for solving sifting sub-problem
+        self.__RMP_MODEL.parameters.lpmethod.set(self.__SUBPROBLEM_METHOD)
+
+        # Check barrier switch when concurrent optimizer is invoked
+        if not self.__ALLOW_BARRIER:
+            self.__RMP_MODEL.parameters.barrier.limits.iteration.set(0)
+
+        # Get time information (start)
+        start_time = self.__RMP_MODEL.get_dettime()
+
+        # Solve the RMP
+        self.__RMP_MODEL.solve()
+
+        # Get time for solving the optimization problem
+        elapsed_time = self.__RMP_MODEL.get_dettime() - start_time
+
+        # Start extracting basis information from RMP
+        # Generally we need to extract primal and dual basis status for the next RMP
+        # Further we need to record the current dual solution for checking the optimality
+
+        # Get overall basis status
+        basis_info = self.__RMP_MODEL.solution.basis.get_basis()
+
+        # Extract column basis information
+        col_basis_new = basis_info[0]
+        assert (len(col_basis_new) == rmp_size + 2 * m)
+
+        # Extract row basis information
+        row_basis_new = basis_info[1]
+        assert (len(row_basis_new) == m)
+
+        # Collect basis information
+        # Collect basis information of auxiliary columns
+        # Note that the first 2 * m columns are added as the auxliliary columns
+        self.__CURRENT_AUX_COL_BASIS_STATUS = col_basis_new[0: 2 * m]
+        assert (min(self.__CURRENT_ROW_BASIS_STATUS) == self.__RMP_MODEL.start.status.at_lower_bound)
+
+        # Update the rest of information arrays
+        for i in range(rmp_size):
+            # Update basis status for the RMP columns
+            self.__CURRENT_ORIGINAL_COL_BASIS_STATUS[cols[i]] = col_basis_new[i + 2 * m]
+            # Update the array recording number of iterations not in basis for columns in working 
+            # problem
+            if col_basis_new[i + 2 * m] == self.__RMP_MODEL.solution.basis.status.at_lower_bound:
+                self.__ITER_NOT_IN_BASIS[cols[i]] = max(self.__ITER_NOT_IN_BASIS[cols[i]],
+                                                        self.__COLUMN_STATUS_JUST_IN_RMP) + 1
+            elif col_basis_new[i + 2 * m] == self.__RMP_MODEL.solution.basis.status.at_upper_bound:
+                self.__ITER_NOT_IN_BASIS[cols[i]] = self.__COLUMN_STATUS_AT_UPPER_BOUND
+            elif col_basis_new[i + 2 * m] == self.__RMP_MODEL.solution.basis.status.basic:
+                self.__ITER_NOT_IN_BASIS[cols[i]] = self.__COLUMN_STATUS_IN_BASIS
+            # Note that we only consider the three kinds of basis status here
+
+        # Update row basis status
+        for i in range(m):
+            self.__CURRENT_ROW_BASIS_STATUS[i] = row_basis_new[i]
+
+        # Update incumbent dual solution
+        # Here we note that all solution arrays are in ndarray format of single dimension
+        self.__INCUMBENT_DUAL_SOL = np.asarray(self.__RMP_MODEL.solution.get_dual_values()).reshape(1,-1)
+
+        # For the first sub-problem, we initialize both smooth dual solution and incumbent dual solution
+        if mode == "I":
+            self.__SMOOTH_DUAL_SOL = self.__INCUMBENT_DUAL_SOL
+
+        # Compute the smoothed dual solution with coefficient being close to 0
+        self.__SMOOTH_DUAL_SOL = (1 - self.__DUAL_SMOOTHING_COEF) * self.__INCUMBENT_DUAL_SOL + \
+                                 self.__DUAL_SMOOTHING_COEF * self.__SMOOTH_DUAL_SOL
+
+        assert (self.__INCUMBENT_DUAL_SOL.shape == (1, m))
+        assert (self.__SMOOTH_DUAL_SOL.shape == (1, m))
+
+        # Update counter
+        self._ITER_COUNT += 1
+
+        # Print solution summary
+        print("\n************** RMP Solution Summary *************")
+        print("* RMP Solution Count: {0}".format(self._ITER_COUNT))
+        print("* RMP Solution Summary: ")
+        print("* RMP Size: {0} + {1} "
+              "(Auxiliary) ({2}) out of "
+              "{3} columns".format(rmp_size, 2 * m, self.__RMP_MODEL.variables.get_num(), self.__NCOL))
+        print("* RMP Solution time: {0}".format(elapsed_time))
+
+        self.__INCUMBENT_OBJ = self.__RMP_MODEL.solution.get_objective_value()
+
+        if self.__INCUMBENT_OBJ >= self.__BIG_M / 2:
+            print("* RMP without auxiliary variables is infeasible (in Big M method)")
+        else:
+            print("* RMP Objective: {0}".format(self.__RMP_MODEL.solution.get_objective_value()))
+
+        print("*************************************************\n")
+        return
+
+    def __default_init_cols(self):
+        # Apply default online algorithm to get initial columns for sifting
+
+        # The problem stored in the framework is to minimize c' * x and for online linear
+        # program we need to invert the sign of c
+        # b_sense = np.max(self.__b * (1 - self.__IS_ROW_EQUAL)) > 0
+
+        # So far we only implement the random initialization method and online algorithm based
+        # initialization
+
+        if self.__IS_INCUMBENT_INITIAL_EXIST:
+            print("Using initial columns supplied by user")
+            return
+
+        assert (self.__ITER_NOT_IN_BASIS == [self.__COLUMN_STATUS_NOT_IN_RMP] * self.__NCOL)
+        assert (sum(self.__CURRENT_ORIGINAL_COL_BASIS_STATUS) == 0)
+        assert (sum(self.__CURRENT_AUX_COL_BASIS_STATUS) == 0)
+        assert (sum(self.__CURRENT_ROW_BASIS_STATUS) == 0)
+
+        print("********** Column Initialization start ***********")
+        if self.__INITIAL_RMP_METHOD == self.__INITIAL_RMP_METHOD_ONLINE:
+            print("* Using online initialization")
+            b_sense = np.min(self.__b) > 0
+
+            # Apply online algorithm
+            x_approx, y_approx = self._sparse_online_LP(self.__A, self.__b, 
+            						-self.__c,
+                                                        self.__IS_ROW_EQUAL, 
+                                                        self.__ONLINE_BOOSTING_PARAM, 
+                                                        b_sense)
+            self.__ONLINE_SOL = x_approx
+            self.__ONLINE_DUAL = y_approx
+
+            candidate_pool = np.where(x_approx == 1)[0].squeeze()
+            candidate_c = self.__c[candidate_pool]
+            col_ord = np.argsort(candidate_c)
+            candidate_pool = candidate_pool[col_ord[0:self.__INITIAL_RMP_SIZE]]
+
+        elif self.__INITIAL_RMP_METHOD == self.__INITIAL_RMP_METHOD_RAND:
+            print("* Using random initialization")
+            # Apply random initialization
+            candidate_pool = np.arange(self.__NCOL)
+            # Here we assume that we face minimization problem and we use the columns
+            # with least column coefficients as the start
+        else:
+            print("* Using greedy initialization")
+            col_ord = np.argsort(self.__c)
+            candidate_pool = col_ord[0:self.__INITIAL_RMP_SIZE]
+
+        if len(candidate_pool) <= self.__INITIAL_RMP_SIZE:
+            self.__RMP_POOL = candidate_pool.tolist()
+        else:
+            self.__RMP_POOL = np.random.choice(candidate_pool, self.__INITIAL_RMP_SIZE, False).tolist()
+
+        # Initialize status for columns in array iter_not_in_basis
+        iter_not_in_basis = np.asarray(self.__ITER_NOT_IN_BASIS)
+        iter_not_in_basis[self.__RMP_POOL] = self.__COLUMN_STATUS_JUST_IN_RMP
+        self.__ITER_NOT_IN_BASIS = iter_not_in_basis.tolist()
+
+        '''
+        self.__RMP_POOL = np.where(pricing >= threshold)[0].squeeze().tolist()
+        iter_not_in_basis = np.asarray(self.__ITER_NOT_IN_BASIS)
+        iter_not_in_basis[self.__RMP_POOL] = 0
+        self.__ITER_NOT_IN_BASIS = iter_not_in_basis.tolist()
+        '''
+        # Do not forget to update __ITER_NOT_IN_BASIS while adding columns
+
+        print(
+            "* Summary: {0} out of {1} initial columns are selected".format(len(self.__RMP_POOL), 
+            								    self.__NCOL))
+
+    def __default_add_cols(self, candidate_cols, reduced_costs):
+
+        # This method implement several pricing methods given the set of candidate columns
+        # (by default all the columns not in current RMP) as well as the reduced costs of
+        # such columns. Most of information related to pricing can be computed through the
+        # reduced costs
+
+        # Transform into ndarray context
+        candidate_cols = np.asarray(candidate_cols)
+
+        # Take the columns with negative reduced costs
+        # This is an array of indices of columns in candidate_cols
+        neg_rdc_cols_idx = np.where(reduced_costs < 0)[0]
+
+        # Get the column indices in all columns with negative reduced costs
+        neg_rdc_cols = candidate_cols[neg_rdc_cols_idx]
+
+        # If we can add all columns
+        if len(neg_rdc_cols) <= self.__NUM_COL_IN:
+            cols_added = neg_rdc_cols.tolist()
+        # If we cannot, we consider following pricing rules
+        else:
+            neg_rdcs = reduced_costs[neg_rdc_cols_idx]
+            if self.__PRICING_METHOD == self.__PRICING_METHOD_STANDARD_PRICE:
+                # Standard pricing rule
+                print("Start standard pricing")
+
+                # Sort the reduced costs and get the order
+                neg_rdc_ord = np.argsort(neg_rdcs)
+
+                # Get columns in order based on reduced costs
+                neg_rdc_cols_idx_ord = neg_rdc_cols[neg_rdc_ord]
+
+                # Get columns to add to the current RMP
+                cols_added = neg_rdc_cols_idx_ord[0: self.__NUM_COL_IN].tolist()
+
+            elif self.__PRICING_METHOD == self.__PRICING_METHOD_LAMBDA_PRICE:
+                # Lambda pricing rule
+                # Note that we use a variation of conventional lambda pricing where the objective 
+                # coefficient is not
+                # assumed non-negative
+                print("Start lambda pricing")
+                lbd_prices = np.abs(np.divide(self.__c[neg_rdc_cols], 
+                				self.__c[neg_rdc_cols] - neg_rdcs))
+                lbd_price_ord = np.argsort(lbd_prices)
+                neg_rdc_cols_idx_ord = neg_rdc_cols[lbd_price_ord]
+
+                assert (lbd_prices[lbd_price_ord[0]] == min(lbd_prices))
+
+                # Get columns to add to the current RMP
+                cols_added = neg_rdc_cols_idx_ord[0: self.__NUM_COL_IN].tolist()
+
+            else:
+                # Steepest pricing rule
+                # Get the basis vector
+                # Basis from the auxiliary variables
+                aux_basis_idx = np.where(np.asarray(self.__CURRENT_AUX_COL_BASIS_STATUS) ==
+                                         self.__RMP_MODEL.solution.basis.status.basic)[0]
+                aux_basis = self.__auxA[:, aux_basis_idx]
+
+                # Basis from original constraint matrix
+                subproblem_basis_idx = np.where(np.asarray(self.__CURRENT_ORIGINAL_COL_BASIS_STATUS) ==
+                                                self.__RMP_MODEL.solution.basis.status.basic)[0]
+                subproblem_basis = self.__A[:, subproblem_basis_idx]
+
+                ncols = subproblem_basis.shape[1] + aux_basis.shape[1]
+                if ncols < self.__NROW:
+                    print("Only got {0} out of {1} columns".format(ncols, self.__NROW))
+                    print("Steepest-edge pricing encountered degeneracy, switching to lambda pricing")
+                    self.__PRICING_METHOD = self.__PRICING_METHOD_LAMBDA_PRICE
+                    self.__default_add_cols(candidate_cols, reduced_costs)
+                    return
+                else:
+                    print("Start steepest edge pricing")
+
+                    # Do concatenation to get basis matrix
+                    basis_mat = sparse.hstack([aux_basis, subproblem_basis])
+                    assert (basis_mat.shape == (self.__NROW, self.__NROW))
+
+                    # Compute partial edge vectors
+                    edges = sparse.linalg.inv(basis_mat) * self.__A[:, neg_rdc_cols]
+                    assert (edges.shape == (self.__NROW, len(neg_rdc_cols)))
+
+                    # Get norm of partial edge vectors
+                    edges_norm = sparse.linalg.norm(edges, axis=0)
+                    assert (edges_norm.shape == len(neg_rdc_cols))
+
+                    # Get norm of all edges and compute steepest edge pricing
+                    stp_prices = np.divide(neg_rdcs, np.sqrt(np.square(edges_norm) + 1))
+
+                    # Sort the prices
+                    stp_price_ord = np.argsort(stp_prices)
+
+                    # Get column indices in order based on the steepest edge pricing
+                    neg_rdc_cols_idx_ord = neg_rdc_cols[stp_price_ord]
+
+                    # Get columns to add to the current RMP
+                    cols_added = neg_rdc_cols_idx_ord[0: self.__NUM_COL_IN].tolist()
+
+        iter_not_in_basis = np.asarray(self.__ITER_NOT_IN_BASIS)
+        iter_not_in_basis[cols_added] = self.__COLUMN_STATUS_JUST_IN_RMP
+        self.__ITER_NOT_IN_BASIS = iter_not_in_basis.tolist()
+
+        assert (len(set(self.__RMP_POOL) & set(cols_added)) == 0)
+        self.__RMP_POOL += cols_added
+        return
+
+    def __default_drop_cols(self):
+
+        # This method implements the process of column purging in the sifting framework and it is based
+        # on the number of iterations for RMP columns not to be in basis. Note that column purging 
+        # also uses a pricing strategy by giving each column a price. By default the higher 
+        # price is, the more tendency we will have to get it removed from the current RMP.
+        #  Here is a brief introduction on how the pricing scheme works.
+        """
+        Sifting Framework Column Purging and Pricing
+
+        We define, for each column, following statuses
+
+        NOT_IN_RMP = -101     :     Columns not in RMP.
+        AT_UPPER_BOUND = -102 :     Columns in RMP, non-basic but at upper bound.                                    
+        IN_BASIS = -103       :     Columns in RMP and in basis.                                     
+
+        After solving each RMP, we update the status for all original columns and increase the price 
+        of non-basic column by 1. When we have to remove columns, we sort columns based on their prices 
+        and remove ones with positive
+        """
+
+        # Get number of columns to drop
+        num_cols_out = self.__NUM_COL_OUT
+
+        # Do not drop columns if size of the working problem has not yet exceeded the tolerance
+        if num_cols_out <= 0:
+            return
+
+        # Based on the principle of purging, we drop columns in working problem that have maximum
+        # number of iterations not in basis
+
+        # Get into ndarray context
+        rmp_cols = np.asarray(self.__RMP_POOL)
+        iter_not_in_basis = np.asarray(self.__ITER_NOT_IN_BASIS)
+        rmp_iterations = iter_not_in_basis[self.__RMP_POOL]
+
+        if max(rmp_iterations) <= 0:
+            print("No columns satisfy removal criterion")
+            return
+
+        # Since we never remove columns in basis and at upper bound, we exclude them
+        # More in details, we take the columns with
+        rmp_cols_removable_idx = np.where(rmp_iterations > 0)[0]
+        rmp_cols_removable = rmp_cols[rmp_cols_removable_idx]
+
+        # If we can remove all of these columns
+        if len(rmp_cols_removable) <= num_cols_out:
+            cols_removed = rmp_cols_removable
+
+        # If we cannot remove all of them, we remove the columns that are not in basis for
+        # most iterations
+        else:
+            # Get the price of columns that are removable
+            rmp_removable_iter = rmp_iterations[rmp_cols_removable_idx]
+
+            # Sort the prices and get columns in order
+            rmp_iterations_ord = np.argsort(rmp_removable_iter)
+            rmp_cols_removable_ord = rmp_cols_removable[rmp_iterations_ord]
+
+            # Get columns to remove
+            cols_removed = rmp_cols_removable_ord[- num_cols_out - 1:]
+            assert (iter_not_in_basis[cols_removed[num_cols_out]] == max(iter_not_in_basis))
+
+        assert (cols_removed is not None)
+
+        # Update column pricing
+        iter_not_in_basis[cols_removed] = self.__COLUMN_STATUS_NOT_IN_RMP
+        self.__ITER_NOT_IN_BASIS = iter_not_in_basis.tolist()
+
+        assert ((set(self.__RMP_POOL) & set(cols_removed)) == set(cols_removed))
+        assert (sum(np.asarray(self.__CURRENT_ORIGINAL_COL_BASIS_STATUS)[cols_removed]) == 0)
+
+        # Update RMP
+        self.__RMP_POOL = list(set(self.__RMP_POOL).difference(set(cols_removed)))
+
+    def __get_reduced_costs(self, cols, use_smooth=True):
+        # This function returns the reduced costs of all columns with indices specified
+        coefs = self.__c[cols]
+        if use_smooth:
+            reduced_costs = coefs - (self.__SMOOTH_DUAL_SOL * self.__A[:, cols]).squeeze()
+        else:
+            reduced_costs = coefs - (self.__INCUMBENT_DUAL_SOL * self.__A[:, cols]).squeeze()
+
+        assert (reduced_costs.shape == (len(cols),))
+        return reduced_costs
+
+    def ColGen(self):
+        # This function integrates all the functionalities define above to do customized column 
+        # generation
+
+        print(" ***************************************************************\n")
+        print(" ******************** Cplex Sifting Framework ******************\n")
+        print(" ***************************************************************\n")
+
+        print("***   Parameter Summary   ***")
+        init_method = "Random" if self.__INITIAL_RMP_METHOD == self.__INITIAL_RMP_METHOD_RAND else "Online"
+        print("* Initialization: {0}".format(init_method) +
+              " (with user supplied initial start)" if self.__IS_INCUMBENT_INITIAL_EXIST else "")
+        print("* Dual smoothing coefficient: {0}".format(self.__DUAL_SMOOTHING_COEF))
+        print("* Boxstep parameters: \n"
+              "* Big M      :{0} \n"
+              "* Epsilon    :{1} \n"
+              "* EQPOS/NEG  :{2}/{3} \n"
+              "* GEQPOS/NEG :{4}/{5} \n"
+              "* LEQPOS/NEG :{6}/{7} \n".format(self.__BIG_M, self.__EPSILON, self.__PENALTY_EQ_POS,
+                                                self.__PENALTY_EQ_NEG, 
+                                                self.__PENALTY_GEQ_POS, self.__PENALTY_GEQ_NEG,
+                                                self.__PENALTY_LEQ_POS, self.__PENALTY_LEQ_NEG))
+
+        # Get initial columns to start restricted master problem
+        ollp_start = time.time()
+        print("\n******   Initial Column Selection ******\n")
+
+        self.__default_init_cols()
+        ollp_time = time.time() - ollp_start
+        print("* Online algorithm takes {0} seconds".format(ollp_time))
+        self.__SOL_TIME.append(ollp_time)
+        print("\n******   Initial Column Selection Done ******\n")
+
+        # Solve initial RMS with extended columns
+        iter_time = time.time()
+        self.__sub_lp_solve(self.__RMP_POOL, "I")
+
+        # Get candidate columns and reduced costs
+        candidate_cols = list(set(list(range(self.__NCOL))).difference(set(self.__RMP_POOL)))
+        reduced_costs = self.__get_reduced_costs(candidate_cols)
+
+        # Begin sifting
+        optimality = (np.min(reduced_costs) >= 0)
+
+        # Double check optimality to avoid mis-pricing
+        if optimality:
+            reduced_costs = self.__get_reduced_costs(candidate_cols, False)
+            optimality = (np.min(reduced_costs) >= 0)
+
+        num_iter = 1
+        iter_time = time.time() - iter_time
+
+        self.__SOL_TIME.append(iter_time)
+        print("\n* Summary: Iteration {0} takes {1} seconds\n".format(num_iter, iter_time))
+        num_iter += 1
+
+        while not optimality and num_iter <= self.__MAX_SIFTING_ITER:
+            iter_time = time.time()
+            print("\n* Begin sifting iteration {0}".format(num_iter))
+            print("* Current objective: {0}".format(self.__INCUMBENT_OBJ))
+
+            size_of_rmp = len(self.__RMP_POOL)
+            self.__default_add_cols(candidate_cols, reduced_costs)
+            print("* Strategy added {0} "
+                  "columns and there are {1} columns "
+                  "in the working problem".format(len(self.__RMP_POOL) - size_of_rmp,
+                                                  len(self.__RMP_POOL)))
+
+            size_of_rmp = len(self.__RMP_POOL)
+
+            if size_of_rmp > self.__MAX_RMP_SIZE:
+                self.__default_drop_cols()
+                print("* Strategy removed {0} "
+                      "columns and there are {1} columns "
+                      "in the working problem\n".format(size_of_rmp - len(self.__RMP_POOL),
+                                                        len(self.__RMP_POOL)))
+
+            self.__sub_lp_solve(self.__RMP_POOL, "L")
+
+            candidate_cols = list(set(list(range(self.__NCOL))).difference(set(self.__RMP_POOL)))
+            reduced_costs = self.__get_reduced_costs(candidate_cols)
+            optimality = (np.min(reduced_costs) >= 0)
+
+            if optimality:
+                reduced_costs = self.__get_reduced_costs(candidate_cols, False)
+                optimality = (np.min(reduced_costs) >= 0)
+
+            num_iter += 1
+            iter_time = time.time() - iter_time
+            self.__SOL_TIME.append(iter_time)
+            print("\n* Summary: Iteration {0} takes {1} seconds".format(num_iter, iter_time))
+
+        if num_iter < self.__MAX_SIFTING_ITER:
+            print("\n************* Sifting framework successfully ends *************")
+            print("* Solution Summary: ")
+            print("* Objective value: {0}".format(self.__RMP_MODEL.solution.get_objective_value()))
+            print("* Total number of sifting iterations: {0}".format(num_iter))
+            print("***************************************************************")
+            print("* Iteration Summary:")
+            print("- Online Algorithm   : {0} seconds".format(ollp_time))
+
+            for i in range(num_iter - 1):
+                print("- Sifting iteration {0}: {1} seconds".format(i + 1, self.__SOL_TIME[i + 1]))
+
+            total_time = sum(self.__SOL_TIME)
+            sifting_time = total_time - ollp_time
+
+            print("- Total solution time: {0} ({1} + {2}) seconds".format(total_time, 
+            								  ollp_time, 
+            								  sifting_time))
+            print("***************************************************************")
+        else:
+            print("************* Iteration limit exceeded ****************")
+            print("* Solution Summary ")
+            print(
+                "* Best Objective value                   : {0}".format(
+                    self.__RMP_MODEL.solution.get_objective_value()))
+
+    # Define public methods
+    def clear_basis(self):
+        self.__CURRENT_AUX_COL_BASIS_STATUS = [self.__RMP_MODEL.start.status.at_lower_bound] *
+        					 (self.__NROW * 2)
+        self.__CURRENT_ORIGINAL_COL_BASIS_STATUS = [self.__RMP_MODEL.start.status.at_lower_bound] * 
+        					  self.__NCOL
+        self.__CURRENT_ROW_BASIS_STATUS = [self.__RMP_MODEL.start.status.at_lower_bound] *
+        				   self.__NROW
+        self.__ITER_NOT_IN_BASIS = [self.__COLUMN_STATUS_NOT_IN_RMP] * self.__NCOL
+        self.__RMP_POOL = []
+
+    def clear_info(self):
+        self.__SOL_TIME = []
+
+    def get_approx_sol(self):
+        return self.__ONLINE_SOL
+
+    def get_basis_status(self):
+        status = {"RMP_POOL": self.__RMP_POOL,
+                  "COL_BASIS_STATUS": self.__CURRENT_ORIGINAL_COL_BASIS_STATUS,
+                  "ROW_BASIS_STATUS": self.__CURRENT_ROW_BASIS_STATUS,
+                  "ITER_STATUS": self.__ITER_NOT_IN_BASIS}
+        return status
+
+    def get_box_param(self):
+        param = {"BigM": self.__BIG_M,
+                 "EPS": self.__EPSILON,
+                 "EQP": self.__PENALTY_EQ_POS,
+                 "EQN": self.__PENALTY_EQ_NEG,
+                 "GEQP": self.__PENALTY_GEQ_POS,
+                 "GEQN": self.__PENALTY_GEQ_NEG,
+                 "LEQP": self.__PENALTY_LEQ_POS,
+                 "LEQN": self.__PENALTY_LEQ_NEG}
+        return param
+
+    def get_num_iter(self):
+        return len(self.__SOL_TIME) - 1
+
+    def get_original_model(self):
+        return self.__ORIGINAL_MODEL
+
+    def get_rmp_model(self):
+        return self.__RMP_MODEL
+
+    def get_sifting_time(self):
+        return sum(self.__SOL_TIME) - self.__SOL_TIME[0]
+
+    def get_solution_time(self):
+        return self.__SOL_TIME
+
+    def set_artificial_penalty(self, penalty):
+        self.__BIG_M = penalty
+        self.__EPSILON = penalty
+        self.__PENALTY_EQ_POS = penalty
+        self.__PENALTY_EQ_NEG = penalty
+        self.__PENALTY_GEQ_POS = penalty
+        self.__PENALTY_GEQ_NEG = penalty
+        self.__PENALTY_LEQ_POS = penalty
+        self.__PENALTY_LEQ_NEG = penalty
+
+    def set_barrier_switch(self, S):
+        self.__ALLOW_BARRIER = (S == 1)
+
+    def set_boosting_param(self, K):
+        self.__ONLINE_BOOSTING_PARAM = K
+
+    def set_box_penalty(self, param):
+
+        try:
+            self.__BIG_M = param["BigM"]
+            self.__EPSILON = param["EPS"]
+            self.__PENALTY_EQ_POS = param["EQP"]
+            self.__PENALTY_EQ_NEG = param["EQN"]
+            self.__PENALTY_GEQ_POS = param["GEQP"]
+            self.__PENALTY_GEQ_NEG = param["GEQN"]
+            self.__PENALTY_LEQ_POS = param["LEQP"]
+            self.__PENALTY_LEQ_NEG = param["LEQN"]
+        except:
+            raise KeyError("Parameter dictionary has incomplete fill-ins")
+
+        return param
+
+    def set_dual_smooth_coef(self, coef):
+        assert (0 <= coef <= 1)
+        self.__DUAL_SMOOTHING_COEF = coef
+
+    def set_drop_iter(self, num_iter):
+        self.__COLUMN_STATUS_JUST_IN_RMP = -num_iter
+
+    def set_init_rmp_method(self, method):
+        if method == "online":
+            self.__INITIAL_RMP_METHOD = self.__INITIAL_RMP_METHOD_ONLINE
+        elif method == "rand":
+            self.__INITIAL_RMP_METHOD = self.__INITIAL_RMP_METHOD_RAND
+        else:
+            self.__INITIAL_RMP_METHOD = self.__INITIAL_RMP_METHOD_GREEDY
+
+    def set_init_rmp_size(self, size):
+        self.__INITIAL_RMP_SIZE = size
+
+    def set_init_cols(self, candidate_pool):
+
+        if len(candidate_pool) <= self.__INITIAL_RMP_SIZE:
+            self.__RMP_POOL = candidate_pool
+        else:
+            print("Columns exceed maximum initial RMP size {0}."
+            " Random sampling start.".format(self.__INITIAL_RMP_SIZE))
+            self.__RMP_POOL = np.random.choice(candidate_pool, self.__INITIAL_RMP_SIZE, False).tolist()
+
+        # Initialize status for columns in array iter_not_in_basis
+        iter_not_in_basis = np.asarray(self.__ITER_NOT_IN_BASIS)
+        iter_not_in_basis[self.__RMP_POOL] = self.__COLUMN_STATUS_JUST_IN_RMP
+        self.__ITER_NOT_IN_BASIS = iter_not_in_basis.tolist()
+
+        self.__IS_INCUMBENT_INITIAL_EXIST = True
+        print("Initial columns are set")
+        print("* Summary: {0} out of {1} "
+        "initial columns are selected".format(len(self.__RMP_POOL), self.__NCOL))
+
+    def set_max_sifting_iter(self, max_iter):
+        self.__MAX_SIFTING_ITER = max_iter
+
+    def set_max_rmp_size(self, max_rmp_size):
+        self.__MAX_RMP_SIZE = max_rmp_size
+
+    def set_num_cols_in(self, num_cols_in):
+        self.__NUM_COL_IN = num_cols_in
+
+    def set_num_cols_out(self, num_cols_out):
+        self.__NUM_COL_OUT = num_cols_out
+
+    def set_pricing_method(self, method):
+        if method == "standard":
+            self.__PRICING_METHOD = self.__PRICING_METHOD_STANDARD_PRICE
+        elif method == "lambda":
+            self.__PRICING_METHOD = self.__PRICING_METHOD_LAMBDA_PRICE
+        else:
+            self.__PRICING_METHOD = self.__PRICING_METHOD_STEEPEST_PRICE
+
+    def set_subproblem_method(self, method):
+        self.__SUBPROBLEM_METHOD = method
+
+    def solve_original(self):
+        self.__ORIGINAL_MODEL.solve()
+
+\end{lstlisting}
+\end{document}
