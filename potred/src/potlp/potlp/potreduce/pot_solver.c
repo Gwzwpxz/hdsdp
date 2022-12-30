@@ -345,7 +345,7 @@ static pot_int potReductionOneStep( pot_solver *pot ) {
         
         // POTLP_DEBUG("beta = %e | a[0] = %e | a[1] = %e \n", pot->betaRadius, alphaStep[0], alphaStep[1]);
         
-        if ( modelVal > 0.0 || pot->betaRadius < 1e-08 ) {
+        if ( modelVal > 0.0 || pot->betaRadius < 1e-05 ) {
             retcode = RETCODE_FAILED;
             error_traceback("Invalid model of potential function");
             goto exit_cleanup;
@@ -664,7 +664,7 @@ extern pot_int potLPInit( pot_solver *pot, pot_int vDim, pot_int vConeDim ) {
     ConeFilterInit(pot->coneFilter, vConeDim, pot->xVec->x + vDim - vConeDim);
     
     /* Potential value is slightly larger */
-    pot->rhoVal = 0.95 * (vConeDim + sqrt(vConeDim));
+    pot->rhoVal = 1.1 * (vConeDim + sqrt(vConeDim));
     POT_CALL(potLanczosInit(pot->lczTool, vDim, vConeDim));
     potLanczosInitData(pot->lczTool, pot, potLPPotentialHVec);
     

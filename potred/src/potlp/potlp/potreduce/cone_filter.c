@@ -73,6 +73,10 @@ extern void ConeFilterBuildUp( col_filter *colFilter, double threshVal ) {
         return;
     }
     
+    if ( threshVal >= 0.1 ) {
+        return;
+    }
+    
     double *xVal = colFilter->coneVals;
     double *coneFilter = colFilter->coneFilter;
     
