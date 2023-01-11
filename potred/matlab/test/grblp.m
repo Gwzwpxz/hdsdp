@@ -12,6 +12,8 @@ A = data.A;
 b = data.b;
 c = data.c;
 
+warning off;
+
 % savepotdata(data);
 
 linesearch = false;
@@ -19,12 +21,12 @@ neweigs = false;
 
 [m, n] = size(A);
 
-p = 1; 
+p = inf; 
 nrmb = norm(b, p); 
 nrmc = norm(c, p);
 
-bscal = 1; nrmb; 
-cscal = 1; nrmc;
+bscal = nrmb; 
+cscal = nrmc;
 b = b / bscal; 
 c = c / cscal;
 % model.rhs = b;
@@ -39,8 +41,12 @@ HSDAA = [sparse(m, m), A, sparse(m, n), -b;
          -A',         sparse(n, n),  -speye(n), c;
          b',          -c',  sparse(1, n), 0];
      
+% if size(HSDAA, 2) > 2000
+%     return;
+% end % End if
+     
 % HSDAA = HSDAA / 100;
-[D, E, HSDA] = ruizscale(HSDAA, 0);
+[D, E, HSDA] = ruizscale(HSDAA, 25);
 E = 1./ E;
 D = 1./ D;
 [D2, E2, HSDA] = pcscale(HSDA, 0);
@@ -52,19 +58,28 @@ HSDA(1:m, :) = HSDA(1:m, :);
 HSDA(m+1:end, :) = HSDA(m+1:end, :); 
 % HSDA(end, :) = HSDA(end, :) * 10; 
 % lpsol = potreduceLp(HSDA, m, 5000, false, linesearch, neweigs, 1);
-% lpsol = potProjObj(HSDA, m, 80000, m, n, data.A, data.b, bscal, data.c, cscal, E);
+% lpsol = potProjObj(HSDA, m, 5000, m, n, data.A, data.b, bscal, data.c, cscal, E);
 % [lpsol, fvals] = lpsgm(HSDA, m, 1000, 1);
-lpsol = potRecur(HSDA, m, 10000, m, n, A, b, c, E);
+% lpsol = potFirst(HSDA, m, 10000, m, n, data.A, data.b, bscal, data.c, cscal, E);
+lpsol = potRecur(HSDA, m, 5000, m, n, A, b, c, E);
 % HSDA(end, :) = HSDA(end, :);
 % lpsol = lpsgm2(HSDA(:, 1:end-1), -HSDA(:, end), m, x0, 1000, 2);
 sol = lpsol .* E; 
-tau = lpsol(end);
+tau = sol(end);
 
 % tau = sol(end);
 y = sol(1:m);
 y = y / (tau / cscal); 
 s = sol(m + n + 1 : m + 2 * n) / (tau / cscal);
 x = sol(m + 1: m + n) / (tau / bscal);
+
+try
+    assert(min(x) >= 0.0);
+    assert(min(s) >= 0.0);
+catch
+    fprintf("Invalid solution. \n");
+    return;
+end % End if
 
 pobj = data.c' * x;
 dobj = data.b' * y;

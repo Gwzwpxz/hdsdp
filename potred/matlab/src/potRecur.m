@@ -8,46 +8,52 @@ ncone = n - m; coneidx = ydim + 1 : n;
 projidx = coneidx;
 % projidx = n - 1 : n;
 nproj = length(projidx);
-rho = 1.1 * (ncone + sqrt(ncone));
+rhomax = 20 * (ncone + sqrt(ncone));
+rhomin = 0.3 * (ncone + sqrt(ncone));
+rho = ncone / 2; % (ncone + sqrt(ncone));
+rhostep = rho;
 e = ones(nproj, 1);
 
 rng(24);
 x_prev = zeros(n, 1);
-x_prev(coneidx) = 1.0;
+scl = 1;
+x_prev(coneidx) = scl;
 
 AT = A';
 ATA = A' * A;
+ATAapp = ATA;
+
 % One step potential reduction
 [f, ~] = fpot(A, ATA, x_prev);
 potold = rho * log(f) - sum(log(x_prev(coneidx)));
 x_pres = x_prev;
 recompute = true;
 
-PT = A(mlp + 1:end, 1:mlp);
-PPT = PT' * PT;
-P = PT';
-Q = A(mlp + 1:end, mlp+1:end);
+% PT = A(mlp + 1:end, 1:mlp);
+% PPT = PT' * PT;
+% P = PT';
+% Q = A(mlp + 1:end, mlp+1:end);
 
 fvals = zeros(maxiter, 1);
 potrds = zeros(maxiter, 1);
 
-betamax = 1.0;
-beta = betamax;
+betamax = 1000;
+beta = 1;
 
 tic;
 fprintf("%5s  %8s  %8s  %8s|  %8s  %8s  %10s  %10s %10s %10s\n",...
     "iter", "pres", "dres", "cpl",  "fval", "pot", "alphag", "alpham", "beta", "potred");
 
-x_cum = x_pres;
+x_cum = x_pres / scl;
 
 logstar = "";
 allowcurv = 0;
-usecurvature = 1;
+usecurvature = 0;
 curvinterval = 0;
 ncurvs = 0;
 
 nbuffer = 32;
-freq = 2000000;
+freq = 10000000;
 Xbuff = zeros(n, nbuffer);
 rcount = 0;
 
@@ -78,11 +84,6 @@ for i = 1:maxiter
             AT = A';
             ATA = A' * A;
             
-%             PT = A(mlp + 1:end, 1:mlp);
-%             PPT = PT' * PT;
-%             P = PT';
-%             Q = A(mlp + 1:end, mlp+1:end);
-            
             x_prev(coneidx) = x_prev(coneidx) ./ x_pres(coneidx);
             x_pres(coneidx) = 1.0;
         end % End if
@@ -97,28 +98,24 @@ for i = 1:maxiter
         fvals(i) = f;
         
         % Prepare momentum
-        mk = x_pres - x_prev;
-        
-        if i >= 100
-            mk = mnt;
-        end % End if
+        mk = x_pres - x_prev;        
         
         % Gradient projection
         gk = g;
-        gk(coneidx) = gk(coneidx) - (f ./ x_pres(coneidx)) / rho;
+        gk(coneidx) = gk(coneidx) - (f ./ x_pres(coneidx)) / rhostep;
         
         if usecurvature && allowcurv
             logstar = "*";
-            method = "direct";
+            method = "truncate";
             xorig = x_pres;
             xorig(coneidx) = xorig(coneidx) .* x_cum(coneidx);
-            [mk, ~] = findnegacurv(x_pres, m, coneidx, projidx, rho, g, f, ATA, AT, A, [], method, xorig);
+            [mk, ~] = findnegacurv(x_pres, m, coneidx, projidx, rhostep, g, f, ATA, AT, A, [], method, xorig, ATAapp);
             usecurvature = false;
             ncurvs = ncurvs + 1;
         end % End if
         
-        gk(projidx) = gk(projidx) - e * sum(gk(projidx)) / nproj;
-        mk(projidx) = mk(projidx) - e * sum(mk(projidx)) / nproj;
+%         gk(projidx) = gk(projidx) - e * sum(gk(projidx)) / nproj;
+%         mk(projidx) = mk(projidx) - e * sum(mk(projidx)) / nproj;
         
         % Prepare hessian
         nrmgk = norm(gk);
@@ -129,7 +126,7 @@ for i = 1:maxiter
         end % End if
         
         gk = gk / nrmgk;
-        nrmgk = nrmgk * rho / f;
+        nrmgk = nrmgk * rhostep / f;
         Agk = A * gk; Amk = A * mk;
         
         gTgk = g' * gk; gTmk = g' * mk;
@@ -140,9 +137,9 @@ for i = 1:maxiter
         mkXXmk = norm(xinvmk)^2;
         gkXXmk = xinvgk' * xinvmk;
         
-        gkHgk = -rho * (gTgk / f)^2 + gkXXgk + rho * norm(Agk)^2 / f;
-        mkHmk = -rho * (gTmk / f)^2 + mkXXmk + rho * norm(Amk)^2 / f;
-        mkHgk = -rho * (gTmk * gTgk) / f^2 + gkXXmk + rho * Amk' * Agk / f;
+        gkHgk = -rhostep * (gTgk / f)^2 + gkXXgk + rhostep * norm(Agk)^2 / f;
+        mkHmk = -rhostep * (gTmk / f)^2 + mkXXmk + rhostep * norm(Amk)^2 / f;
+        mkHgk = -rhostep * (gTmk * gTgk) / f^2 + gkXXmk + rhostep * Amk' * Agk / f;
         
         gkTgk = gk' * gk * nrmgk; gkTmk = gk' * mk * nrmgk;
         
@@ -158,6 +155,13 @@ for i = 1:maxiter
     d = alpha(1) * gk + alpha(2) * mk;
     
     xtmp = x_pres + d;
+    
+    if min(xtmp(coneidx)) < 0.0
+        beta = beta * 0.25;
+        recompute = false;
+        continue;
+    end % End if
+    
     [ftmp, ~, ~] = fpot(A, ATA, xtmp);
     potnew = rho * log(ftmp) - sum(log(xtmp(coneidx)));
     potred = potnew - potold;
@@ -174,7 +178,7 @@ for i = 1:maxiter
         break;
     end % End if
     
-    if (ratio < 0.2 || potred > 0)
+    if potred > 0 % (ratio < 0.2 || potred > 0)
         beta = beta * 0.25;
         recompute = false;
         continue;
@@ -187,6 +191,8 @@ for i = 1:maxiter
     recompute = true;
     x_prev = x_pres;
     x_pres = x_pres + d;
+    x_pres = scl * x_pres / sum(x_pres(coneidx));
+    
     potold = potnew;
     
 %     x_pres(1:mlp) = PPT \ P * (-Q * x_pres(m+1:end));
@@ -208,10 +214,7 @@ for i = 1:maxiter
     dres = Alp' * y + s - clp;
     cpl = blp' * y - clp' * x;
     
-    mnt = findntdir(Alp, blp, clp, x, y, s, 1);
-    mnt = mnt ./ E;
-    
-    if mod(i, 500)
+    if mod(i, 500) == 1
         fprintf("%5d | %8.2e %8.2e %8.2e | %+8.2e  %+8.2e  %+8.2e  %+8.2e  %+8.2e  %+8.2e %1.1s %3.3f %+3.3e\n",...
             i, norm(pres), norm(dres), norm(cpl), f, potnew, alpha(1), alpha(2), beta, potred, logstar, toc, min(x_pres(coneidx)));
     end % End if
@@ -223,6 +226,7 @@ end % End for
 fprintf("Curvature is computed %d times. \n", ncurvs);
 x_pres(coneidx) = x_pres(coneidx) .* x_cum(coneidx);
 x = x_pres;
+
 % semilogy(fvals, 'LineWidth', 3);
 % hold on;
 
