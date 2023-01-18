@@ -92,7 +92,7 @@
   </eqnarray*>
 
   <\eqnarray*>
-    <tformat|<table|<row|<cell|s>|<cell|\<geq\>>|<cell|<around*|[|c<rsub|t>-<a><rsub|t><rsup|\<top\>><y>|]><rsub|+>>>|<row|<cell|<d>+<frac|<y>-<y><rsup|t>|\<gamma\><rsub|t>>-<a><rsub|t>x<rsub|t>-<w>>|<cell|=>|<cell|<0>>>|<row|<cell|<y><rsup|\<top\>><w>>|<cell|=>|<cell|0>>|<row|<cell|x<rsub|t><around*|(|c<rsub|t>-<a><rsub|t><rsup|\<top\>><y>-s|)>>|<cell|=>|<cell|0>>|<row|<cell|<around*|(|1-x<rsub|t>|)>s>|<cell|=>|<cell|0>>|<row|<cell|x<rsub|t>,v<rsub|t>,x<rsub|t>,<y>,<w>>|<cell|\<geq\>>|<cell|<0>>>|<row|<cell|x<rsub|t>>|<cell|\<leq\>>|<cell|1,>>>>
+    <tformat|<table|<row|<cell|s>|<cell|\<geq\>>|<cell|<around*|[|c<rsub|t>-<a><rsub|t><rsup|\<top\>><y>|]><rsub|+>>>|<row|<cell|<d>+<frac|<y>-<y><rsup|t>|\<gamma\><rsub|t>>-<a><rsub|t>x<rsub|t>-<w>>|<cell|=>|<cell|<0>>>|<row|<cell|<y><rsup|\<top\>><w>>|<cell|=>|<cell|0>>|<row|<cell|x<rsub|t><around*|(|c<rsub|t>-<a><rsub|t><rsup|\<top\>><y>-s|)>>|<cell|=>|<cell|0>>|<row|<cell|<around*|(|1-x<rsub|t>|)>s>|<cell|=>|<cell|0>>|<row|<cell|x<rsub|t>,v<rsub|t>,<y>,<w>>|<cell|\<geq\>>|<cell|<0>>>|<row|<cell|x<rsub|t>>|<cell|\<leq\>>|<cell|1,>>>>
   </eqnarray*>
 
   where the condition with respect to <math|v<rsub|t>> is simplified using
