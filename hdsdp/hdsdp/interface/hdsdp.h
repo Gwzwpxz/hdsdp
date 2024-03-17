@@ -37,6 +37,11 @@
 #endif
 #endif
 
+// GPU Support
+#ifndef HDSDP_NVIDIA
+//#define HDSDP_NVIDIA
+#endif
+
 typedef enum {
     
     HDSDP_RETCODE_OK,
@@ -90,12 +95,12 @@ typedef struct hdsdp_solver_internal hdsdp;
 // Version information
 #define VERSION_MAJOR           1
 #define VERSION_MINOR           0
-#define VERSION_TECHNICAL       0
+#define VERSION_TECHNICAL       1
 
 // Build date
-#define BUILD_DATE_YEAR         2023
-#define BUILD_DATE_MONTH        07
-#define BUILD_DATE_DAY          21
+#define BUILD_DATE_YEAR         2024
+#define BUILD_DATE_MONTH        03
+#define BUILD_DATE_DAY          17
 
 #ifdef __cplusplus
 extern "C" {

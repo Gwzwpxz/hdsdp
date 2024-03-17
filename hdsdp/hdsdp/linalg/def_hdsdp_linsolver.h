@@ -6,8 +6,14 @@
 
 #ifdef HEADERPATH
 #include "interface/hdsdp.h"
+#ifdef HDSDP_NVIDIA
+#include "cuDSS.h"
+#endif
 #else
 #include "hdsdp.h"
+#ifdef HDSDP_NVIDIA
+#include "external/cuDSS.h"
+#endif
 #endif
 
 /* In HDSDP, there are two cases where positve definite matrices need to
@@ -27,7 +33,11 @@ typedef enum {
     
     /* Iterative solver is only used for Schur complement */
     HDSDP_LINSYS_DENSE_ITERATIVE,
-    HDSDP_LINSYS_DENSE_INDEFINITE
+    HDSDP_LINSYS_DENSE_INDEFINITE,
+    
+    /* GPU Support */
+    HDSDP_LINSYS_DENSE_DIRECT_GPU,
+    HDSDP_LINSYS_SPARSE_DIRECT_GPU,
     
 } linsys_type;
 

@@ -1233,6 +1233,16 @@ static void lapackIndefiniteLinSolverDestroy( void **pchol ) {
     return;
 }
 
+/* Dense direct solver interface with GPU support */
+static hdsdp_retcode dsGpuLinSolverCreate( void **pchol, int nCol ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    HDSDP_NULLCHECK(pchol);
+    
+exit_cleanup:
+    return retcode;
+}
+
 static hdsdp_retcode HFpLinsysSwitchToIndefinite( hdsdp_linsys_fp *HLin ) {
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
