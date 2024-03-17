@@ -8,12 +8,11 @@ int test_mat( char *path );
 int main(int argc, const char * argv[]) {
  
     if ( argc > 1 ) {
-        return test_solver(argv[1]);
+        return test_mat(argv[1]);
     } else {
         
         char *path = "/Users/gaowenzhi/Desktop/gwz/hdsdp/gpu/A/";
         test_mat(path);
-        
 //        char *fname = "/Users/gaowenzhi/Desktop/gwz/benchmark/sdplib/maxG32.dat-s";
 //        return test_solver(fname);
     }
