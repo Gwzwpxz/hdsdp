@@ -148,8 +148,6 @@ static void HDSDPIAdjustConeParams( hdsdp *HSolver ) {
         set_int_param(HSolver, INT_PARAM_PSDP, 0);
     }
     
-    set_int_param(HSolver, INT_PARAM_PSDP, 1);
-    
     if ( isOneCone ) {
         HConeDetectFeature(HSolver->HCones[0], HSolver->rowRHS, HSolver->HIntFeatures, HSolver->HDblFeatures);
     }
