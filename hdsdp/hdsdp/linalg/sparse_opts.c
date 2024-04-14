@@ -173,7 +173,7 @@ extern double csp_dot_fds( int n, int *Ap, int *Ai, double *Ax, double *B ) {
         }
     }
     
-    return dAdotB;
+    return 2.0 * dAdotB;
 }
 
 extern void csp_dump( int n, int *Ap, int *Ai, double *Ax, double *v ) {

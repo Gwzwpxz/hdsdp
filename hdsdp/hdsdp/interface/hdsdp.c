@@ -10,6 +10,7 @@
 #include "interface/hdsdp_user_data.h"
 #include "interface/hdsdp_schur.h"
 #include "interface/hdsdp_algo.h"
+#include "interface/hdsdp_psdp.h"
 #include "linalg/dense_opts.h"
 #else
 #include "def_hdsdp.h"
@@ -21,6 +22,7 @@
 #include "hdsdp_schur.h"
 #include "hdsdp_algo.h"
 #include "dense_opts.h"
+#include "hdsdp_psdp.h"
 #include "vec_opts.h"
 #endif
 
@@ -145,6 +147,8 @@ static void HDSDPIAdjustConeParams( hdsdp *HSolver ) {
     if ( get_int_feature(HSolver, INT_FEATURE_N_LPCONES) > 0 ) {
         set_int_param(HSolver, INT_PARAM_PSDP, 0);
     }
+    
+    set_int_param(HSolver, INT_PARAM_PSDP, 1);
     
     if ( isOneCone ) {
         HConeDetectFeature(HSolver->HCones[0], HSolver->rowRHS, HSolver->HIntFeatures, HSolver->HDblFeatures);
@@ -822,7 +826,14 @@ extern hdsdp_retcode HDSDPCheckSolution( hdsdp *HSolver, double dErrs[6] ) {
     /* Check DIMACS errors of the SDP solution */
     HDSDP_ZERO(HSolver->dHAuxiVec1, double, HSolver->nRows);
     for ( int iCone = 0; iCone < HSolver->nCones; ++iCone ) {
-        HDSDPGetConeValues(HSolver, iCone, dPrimalMatBuffer, dDualMatBuffer, dAuxiMat);
+        
+        if ( HSolver->psdp ) {
+            HPSDPGetSolution(HSolver->psdp, iCone, dPrimalMatBuffer);
+            HDSDPGetConeValues(HSolver, iCone, NULL, dDualMatBuffer, dAuxiMat);
+        } else {
+            HDSDPGetConeValues(HSolver, iCone, dPrimalMatBuffer, dDualMatBuffer, dAuxiMat);
+        }
+        
         /* Get A * X */
         HConeComputeATimesX(HSolver->HCones[iCone], dPrimalMatBuffer, HSolver->dHAuxiVec1);
         /* Compute complementarity */
@@ -840,6 +851,8 @@ extern hdsdp_retcode HDSDPCheckSolution( hdsdp *HSolver, double dErrs[6] ) {
         
         dMinPrimalEVal = HDSDP_MIN(dMinPrimalEVal, dEValAuxi[0]);
     }
+    
+    HPSDPDestroy(&HSolver->psdp);
     
     dDualObj = dDualObj / (dPrimalScal * dDualScal);
     dPrimalObj = dPrimalObj / (dPrimalScal * dDualScal);
@@ -926,6 +939,10 @@ extern void HDSDPClear( hdsdp *HSolver ) {
     HConeDestroy(&HSolver->HBndCone);
     
     HKKTDestroy(&HSolver->HKKT);
+    
+    if ( HSolver->psdp ) {
+        HPSDPDestroy(&HSolver->psdp);
+    }
     
     HDSDP_FREE(HSolver->dRowDual);
     HDSDP_FREE(HSolver->dRowDualStep);

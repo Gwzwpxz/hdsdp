@@ -1800,13 +1800,17 @@ static hdsdp_retcode HDSDP_PhaseB_BarDualPotentialSolve( hdsdp *HSolver ) {
             break;
         }
         
-        if ( HSolver->comp < (fabs(HSolver->pObjVal) + fabs(HSolver->dObjVal) + 1.0) * 1e-02 && iPrimalMethod ) {
-            hdsdp_psdp *psdp = NULL;
-            HDSDP_CALL(HPSDPCreate(&psdp));
-            HDSDP_CALL(HPSDPInit(psdp, HSolver));
-            retcode = HPSDPOptimize(psdp);
-            HPSDPDestroy(&psdp);
-            break;
+        if ( (HSolver->dDStep == 1.0 || HSolver->dBarrierMu < 1e-07) && HSolver->comp < (fabs(HSolver->pObjVal) + fabs(HSolver->dObjVal) + 1.0) * 1e-02 && iPrimalMethod ) {
+            HDSDP_CALL(HPSDPCreate(&HSolver->psdp));
+            HDSDP_CALL(HPSDPInit(HSolver->psdp, HSolver));
+            retcode = HPSDPOptimize(HSolver->psdp);
+            if ( retcode != HDSDP_RETCODE_OK ) {
+                HPSDPDestroy(&HSolver->psdp);
+                iPrimalMethod = 0;
+                set_int_param(HSolver, INT_PARAM_PSDP, 0);
+            } else {
+                break;
+            }
         }
         
         if ( HUtilCheckCtrlC() ) {

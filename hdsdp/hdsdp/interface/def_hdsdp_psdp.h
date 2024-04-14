@@ -25,7 +25,7 @@ typedef struct {
     hdsdp *HSolver;
     
     /* Basic conic information */
-    int nRow;
+    int nRows;
     int nCones;
     
     /* Synchronized from dual solver, no memory needed */

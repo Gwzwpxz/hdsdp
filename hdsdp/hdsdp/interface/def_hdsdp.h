@@ -8,6 +8,7 @@
 #include "interface/hdsdp_user_data.h"
 #include "interface/hdsdp_schur.h"
 #include "interface/hdsdp_algo.h"
+#include "interface/hdsdp_psdp.h"
 #else
 #include "hdsdp.h"
 #include "hdsdp_conic.h"
@@ -15,6 +16,7 @@
 #include "hdsdp_user_data.h"
 #include "hdsdp_schur.h"
 #include "hdsdp_algo.h"
+#include "hdsdp_psdp.h"
 #endif
 
 #define NUM_INT_PARAM  20
@@ -74,6 +76,9 @@ struct hdsdp_solver_internal {
     
     /* KKT solver */
     hdsdp_kkt *HKKT;
+    
+    /* Primal refinement */
+    hdsdp_psdp *psdp;
     
     /* Step and vector */
     double *dRowDual;

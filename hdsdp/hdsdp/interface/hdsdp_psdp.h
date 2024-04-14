@@ -13,6 +13,7 @@ extern "C" {
 extern hdsdp_retcode HPSDPCreate( hdsdp_psdp **pHpsdp );
 extern hdsdp_retcode HPSDPInit( hdsdp_psdp *Hpsdp, hdsdp *HSolver );
 extern hdsdp_retcode HPSDPOptimize( hdsdp_psdp *Hpsdp );
+extern void HPSDPGetSolution( hdsdp_psdp *Hpsdp, int iCone, double *dPrimalX );
 extern void HPSDPClear( hdsdp_psdp *Hpsdp );
 extern void HPSDPDestroy( hdsdp_psdp **pHpsdp );
 

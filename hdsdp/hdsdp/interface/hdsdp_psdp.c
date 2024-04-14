@@ -30,6 +30,24 @@ static void sdpPrimalConeILanczosMultiply( void *Hpsdp, double *dLhsVec, double 
     return;
 }
 
+static hdsdp_retcode HPSDPIRecover( hdsdp_psdp *Hpsdp ) {
+    
+    /* Restore the dual solution in case of failure 
+       Barrier parameter and primal bound will be kept */
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    double *dDualBackUp = Hpsdp->dPrimalAuxiVec2;
+    
+    HDSDP_MEMCPY(Hpsdp->dRowDual, dDualBackUp, double, Hpsdp->nRows);
+    
+    int isInterior = 0;
+    for ( int iCone = 0; iCone < Hpsdp->nCones; ++iCone ) {
+        HDSDP_CALL(HConeCheckIsInterior(Hpsdp->HCones[iCone], 1.0, Hpsdp->dRowDual, &isInterior));
+    }
+    
+exit_cleanup:
+    return retcode;
+}
+
 extern hdsdp_retcode HPSDPCreate( hdsdp_psdp **pHpsdp ) {
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
@@ -62,7 +80,7 @@ extern hdsdp_retcode HPSDPInit( hdsdp_psdp *Hpsdp, hdsdp *HSolver ) {
     Hpsdp->HCones = HSolver->HCones;
     
     /* Space in dual solver is reused in PSDP */
-    Hpsdp->nRow = HSolver->nRows;
+    Hpsdp->nRows = HSolver->nRows;
     Hpsdp->nCones = HSolver->nCones;
     Hpsdp->rowRHS = HSolver->rowRHS;
     Hpsdp->HKKT = HSolver->HKKT;
@@ -90,7 +108,7 @@ extern hdsdp_retcode HPSDPInit( hdsdp_psdp *Hpsdp, hdsdp *HSolver ) {
     }
     
     /* Primal memory allocation */
-    HDSDP_INIT(Hpsdp->dPrimalKKTRhs, double, Hpsdp->nRow);
+    HDSDP_INIT(Hpsdp->dPrimalKKTRhs, double, Hpsdp->nRows);
     HDSDP_MEMCHECK(Hpsdp->dPrimalKKTRhs);
     
     HDSDP_INIT(Hpsdp->dPrimalX, double *, Hpsdp->nCones);
@@ -131,7 +149,7 @@ extern hdsdp_retcode HPSDPInit( hdsdp_psdp *Hpsdp, hdsdp *HSolver ) {
     
     /* Register primal matrix in KKT solver */
     HKKTRegisterPSDP(Hpsdp->HKKT, Hpsdp->dPrimalScalX);
-    hdsdp_printf("Primal solver is initialized. \n");
+    hdsdp_printf("HDSDP converges. Primal refinement starts. \n");
     
 exit_cleanup:
     return retcode;
@@ -152,6 +170,7 @@ extern hdsdp_retcode HPSDPOptimize( hdsdp_psdp *Hpsdp ) {
     double *dRowDual = Hpsdp->dRowDual;
     double *dRowDualStep = Hpsdp->dRowDualStep;
     double *dPrimalInfeas = Hpsdp->dPrimalAuxiVec1;
+    double *dDualBackUp = Hpsdp->dPrimalAuxiVec2;
     double dBarrierMu = Hpsdp->dBarrierMu;
     
     hdsdp_cone **cones = Hpsdp->HCones;
@@ -169,6 +188,8 @@ extern hdsdp_retcode HPSDPOptimize( hdsdp_psdp *Hpsdp ) {
     int nMaxIter = 20;
     double dPrimalInfeasNorm = 0.0;
     
+    /* Back up dual solution in case of failure */
+    HDSDP_MEMCPY(dDualBackUp, HSolver->dRowDual, double, HSolver->nRows);
     /* Build KKT system */
     HDSDP_CALL(HKKTBuildUp(Hpsdp->HKKT, KKT_TYPE_PRIMAL));
     // hdsdp_printf("KKT Build up: %f s \n", HUtilGetTimeStamp() - HSolver->dTimeBegin);
@@ -179,12 +200,12 @@ extern hdsdp_retcode HPSDPOptimize( hdsdp_psdp *Hpsdp ) {
     for ( nIter = 0; nIter < nMaxIter; ++nIter ) {
         
         /* Compute primal infeasibility rp = A * X - b */
-        HDSDP_ZERO(dPrimalInfeas, double, Hpsdp->nRow);
+        HDSDP_ZERO(dPrimalInfeas, double, Hpsdp->nRows);
         for ( int iCone = 0; iCone < Hpsdp->nCones; ++iCone ) {
             HConeComputeATimesX(cones[iCone], dPrimalX[iCone], dPrimalInfeas);
         }
         dPrimalInfeasNorm = 0.0;
-        for ( int iRow = 0; iRow < Hpsdp->nRow; ++iRow ) {
+        for ( int iRow = 0; iRow < Hpsdp->nRows; ++iRow ) {
             double dTmp = Hpsdp->rowRHS[iRow] - dPrimalInfeas[iRow];
             dPrimalInfeasNorm += dTmp * dTmp;
         }
@@ -199,12 +220,12 @@ extern hdsdp_retcode HPSDPOptimize( hdsdp_psdp *Hpsdp ) {
             HConeBuildPrimalXSXDirection(cones[iCone], Hpsdp->HKKT, dPrimalX[iCone], dPrimalMatBuffer[iCone], iDualMat);
         }
         
-        HDSDP_ZERO(dPrimalKKTRhs, double, Hpsdp->nRow);
+        HDSDP_ZERO(dPrimalKKTRhs, double, Hpsdp->nRows);
         for ( int iCone = 0; iCone < Hpsdp->nCones; ++iCone) {
             HConeComputeATimesX(cones[iCone], dPrimalMatBuffer[iCone], dPrimalKKTRhs);
         }
         
-        for ( int iRow = 0; iRow < Hpsdp->nRow; ++iRow ) {
+        for ( int iRow = 0; iRow < Hpsdp->nRows; ++iRow ) {
             dPrimalKKTRhs[iRow] -= dBarrierMu * dPrimalInfeas[iRow];
         }
         
@@ -239,12 +260,12 @@ extern hdsdp_retcode HPSDPOptimize( hdsdp_psdp *Hpsdp ) {
             dMaxPrimalStep = HDSDP_MIN(dMaxPrimalStep, dPrimalStep);
         }
         
-        dMaxPrimalStep = HDSDP_MIN(0.7 * dMaxPrimalStep, 1.0);
-        dMaxDualStep = HDSDP_MIN(0.7 * dMaxDualStep, 1.0);
+        dMaxPrimalStep = HDSDP_MIN(0.9 * dMaxPrimalStep, 1.0);
+        dMaxDualStep = HDSDP_MIN(0.9 * dMaxDualStep, 1.0);
         
         /* Take step */
         /* Dual step */
-        axpy(&Hpsdp->nRow, &dMaxDualStep, dRowDualStep, &HIntConstantOne, dRowDual, &HIntConstantOne);
+        axpy(&Hpsdp->nRows, &dMaxDualStep, dRowDualStep, &HIntConstantOne, dRowDual, &HIntConstantOne);
         
         /* Primal step */
         for ( int iCone = 0; iCone < Hpsdp->nCones; ++iCone ) {
@@ -273,7 +294,7 @@ extern hdsdp_retcode HPSDPOptimize( hdsdp_psdp *Hpsdp ) {
         }
         
         /* Update barrier parameter */
-        double dDualObj = dot(&Hpsdp->nRow, Hpsdp->rowRHS, &HIntConstantOne, dRowDual, &HIntConstantOne);
+        double dDualObj = dot(&Hpsdp->nRows, Hpsdp->rowRHS, &HIntConstantOne, dRowDual, &HIntConstantOne);
         double dPrimalObj = 0.0;
         double dCompl = 0.0;
         for ( int iCone = 0; iCone < Hpsdp->nCones; ++iCone ) {
@@ -281,8 +302,15 @@ extern hdsdp_retcode HPSDPOptimize( hdsdp_psdp *Hpsdp ) {
             dCompl += HConeComputeXDotS(cones[iCone], dPrimalX[iCone]);
         }
         
-        dCompl = dCompl / dSumDims;
-        dBarrierMu = HDSDP_MIN(dBarrierMu, dCompl / (1.25 * dSumDims));
+        double dBarrierTarget = HDSDP_MIN(dBarrierMu, dCompl / (3 * dSumDims));
+        
+        if ( dBarrierMu < 1e-10 || 1 ) {
+            dBarrierTarget = HDSDP_MIN(dBarrierMu, dCompl);
+            dBarrierTarget = dBarrierTarget * (1 - 2.0 / sqrt(dSumDims));
+        }
+        
+        dBarrierMu = dBarrierTarget;
+//        dBarrierMu = HDSDP_MAX(dBarrierTarget, 1e-12);
         
         /* Synchronize data to HSolver */
         HSolver->pObjInternal = dPrimalObj;
@@ -296,12 +324,13 @@ extern hdsdp_retcode HPSDPOptimize( hdsdp_psdp *Hpsdp ) {
         double elapsedTime = HUtilGetTimeStamp() - HSolver->dTimeBegin;
         Hpsdp->HSolver->nIterCount += 1;
         
-        hdsdp_printf("    %5d  %+15.8e  %+15.8e  %8.2e  %8.2e  %5.2f %5.2f     %4.1f \n", Hpsdp->HSolver->nIterCount + 1,
+        hdsdp_printf("    %5d  %+15.8e  %+15.8e  %8.2e  %8.2e  P:%5.2f D:%5.2f %4.1f \n", Hpsdp->HSolver->nIterCount + 1,
                HSolver->pObjVal, HSolver->dObjVal, HSolver->pInfeas, HSolver->dBarrierMu,
                dMaxPrimalStep, HSolver->dDStep, elapsedTime);
         
         if ( HSolver->comp < (fabs(HSolver->pObjVal) + fabs(HSolver->dObjVal) + 1.0) * dReloptTol &&
             HSolver->comp < dAbsoptTol / pdScal ) {
+            HSolver->HStatus = HDSDP_PRIMAL_DUAL_OPTIMAL;
             break;
         }
         
@@ -316,16 +345,32 @@ extern hdsdp_retcode HPSDPOptimize( hdsdp_psdp *Hpsdp ) {
         HSolver->comp = dCompl;
     }
     
+    
+#if 0
     double dPDGap = HSolver->pObjVal - HSolver->dObjVal;
     dPDGap = dPDGap / (fabs(HSolver->pObjVal) + fabs(HSolver->dObjVal) + 1.0);
     double dPrimalInf = dPrimalInfeasNorm / (1.0 + get_dbl_feature(HSolver, DBL_FEATURE_RHSONENORM));
     double dCompl = HSolver->comp;
     dCompl = dCompl / (fabs(HSolver->pObjVal) + fabs(HSolver->dObjVal) + 1.0);
+    
     hdsdp_printf("Primal solver ends. Primal. inf: %10.5e  Gap: %10.5e  Compl: %10.5e \n", dPrimalInf, dPDGap, dCompl);
+#endif
     
 exit_cleanup:
     
+    if ( retcode != HDSDP_RETCODE_OK ) {
+        HPSDPIRecover(Hpsdp);
+    }
+    
     return retcode;
+}
+
+extern void HPSDPGetSolution( hdsdp_psdp *Hpsdp, int iCone, double *dPrimalX ) {
+
+    int nCol = HConeGetDim(Hpsdp->HCones[iCone]);
+    HDSDP_MEMCPY(dPrimalX, Hpsdp->dPrimalX[iCone], double, nCol * nCol);
+    
+    return;
 }
 
 extern void HPSDPClear( hdsdp_psdp *Hpsdp ) {
