@@ -26,6 +26,10 @@
 #define HDSDP_SPARSE_CONE_THRESHOLD  (0.3)
 #define HDSDP_SPARSE_SCHUR_THRESHOLD (0.3)
 
+#ifndef DUMMY_KKT
+#define DUMMY_KKT
+#endif
+
 #ifdef MEMORY_DEBUG
 #ifndef MEMWATCH
 #define MEMWATCH
@@ -71,6 +75,7 @@ typedef struct hdsdp_solver_internal hdsdp;
 #define INT_PARAM_CORRECTORB    2
 #define INT_PARAM_THREADS       3
 #define INT_PARAM_PSDP          4
+#define INT_PARAM_PRELEVEL      5
 
 // Double Parameters
 #define DBL_PARAM_RELFEASTOL    0

@@ -541,6 +541,10 @@ static int sdpDenseConeIChooseKKTStrategy( int *rowRanks, int *rowSparsity, int 
     int bestKKTStrategy = KKT_M1;
     double bestKKTScore = HDSDP_INFINITY;
     
+#ifdef DUMMY_KKT
+    return KKT_M3;
+#endif
+    
     double KKTScore1 = HDSDP_INFINITY;
     (void) KKTScore1;
     double KKTScore2 = 0.0;

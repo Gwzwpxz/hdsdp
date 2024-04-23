@@ -270,6 +270,8 @@ static void HDSDPIAdjustParams( hdsdp *HSolver ) {
     
     hdsdp_printf("  Making adjustments\n");
     
+    int iPreLevel = get_int_param(HSolver, INT_PARAM_PRELEVEL);
+    
     /* Scale cone objective and RHS */
     double objOneNorm = get_dbl_feature(HSolver, DBL_FEATURE_OBJONENORM);
     double rhsInfNorm = get_dbl_feature(HSolver, DBL_FEATURE_RHSINFNORM);
@@ -324,6 +326,10 @@ static void HDSDPIAdjustParams( hdsdp *HSolver ) {
     int nCorrA = 0;
     int nCorrB = 0;
     
+    if ( iPreLevel < 1 ) {
+        return;
+    }
+    
     nCorrA = (int) (HSolver->nRows - 2) / get_int_feature(HSolver, INT_FEATURE_N_MAXCONEDIM);
     
     if ( get_int_feature(HSolver, INT_FEATURE_N_SUMCONEDIMS) < 100 && nCorrA == 0 ) {
@@ -369,6 +375,10 @@ static void HDSDPIAdjustParams( hdsdp *HSolver ) {
     set_int_param(HSolver, INT_PARAM_CORRECTORA, nCorrA);
     set_int_param(HSolver, INT_PARAM_CORRECTORB, nCorrB);
     
+    if ( iPreLevel < 2 ) {
+        return;
+    }
+    
     if ( get_int_feature(HSolver, INT_FEATURE_I_MANYCONES) ) {
         set_int_param(HSolver, INT_PARAM_CORRECTORA, 6);
         set_int_param(HSolver, INT_PARAM_CORRECTORB, 0);
@@ -388,6 +398,7 @@ static void HDSDPIGetDefaultParams( hdsdp *HSolver ) {
     set_int_param(HSolver, INT_PARAM_CORRECTORB, 12);
     set_int_param(HSolver, INT_PARAM_THREADS, 12);
     set_int_param(HSolver, INT_PARAM_PSDP, 0);
+    set_int_param(HSolver, INT_PARAM_PRELEVEL, 1);
     
     set_dbl_param(HSolver, DBL_PARAM_ABSOPTTOL, 1e-08);
     set_dbl_param(HSolver, DBL_PARAM_ABSFEASTOL, 1e-08);
@@ -415,6 +426,7 @@ static void HDSDPIPrintParams( hdsdp *HSolver ) {
     print_int_param(HSolver, INT_PARAM_CORRECTORB, "Feasible corrector");
     print_int_param(HSolver, INT_PARAM_THREADS, "Threads");
     print_int_param(HSolver, INT_PARAM_PSDP, "Primal refinement");
+    print_int_param(HSolver, INT_PARAM_PRELEVEL, "Presolve level");
     
     print_dbl_param(HSolver, DBL_PARAM_ABSOPTTOL, "Abs optimality");
     print_dbl_param(HSolver, DBL_PARAM_RELOPTTOL, "Rel optimality");
@@ -630,6 +642,10 @@ extern hdsdp_retcode HDSDPOptimize( hdsdp *HSolver, int dOptOnly ) {
     hdsdp_printf("Wenzhi Gao, Dongdong Ge, Yinyu Ye, 2023\n");
     hdsdp_printf("---------------------------------------------\n");
     HSolver->dTimeBegin = HUtilGetTimeStamp();
+    
+#ifdef DUMMY_KKT
+    hdsdp_printf("\n>>> Warning: using dummy KKT solver.\n\n");
+#endif
     
     /* Process conic data */
     hdsdp_printf("Pre-solver starts \n");
