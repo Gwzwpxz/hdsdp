@@ -1800,7 +1800,7 @@ static hdsdp_retcode HDSDP_PhaseB_BarDualPotentialSolve( hdsdp *HSolver ) {
             break;
         }
         
-        if ( (HSolver->dDStep == 1.0 || HSolver->dBarrierMu < 1e-07) && HSolver->comp < (fabs(HSolver->pObjVal) + fabs(HSolver->dObjVal) + 1.0) * 1e-02 && iPrimalMethod ) {
+        if ( (HSolver->dDStep == 1.0 || HSolver->dBarrierMu < 1e-05) &&  HSolver->pInfeas < 1e-06 && HSolver->comp < (fabs(HSolver->pObjVal) + fabs(HSolver->dObjVal) + 1.0) * 0.1 && iPrimalMethod ) {
             HDSDP_CALL(HPSDPCreate(&HSolver->psdp));
             HDSDP_CALL(HPSDPInit(HSolver->psdp, HSolver));
             retcode = HPSDPOptimize(HSolver->psdp);
@@ -1845,19 +1845,6 @@ static hdsdp_retcode HDSDP_PhaseB_BarDualPotentialSolve( hdsdp *HSolver ) {
         
     }
     
-exit_cleanup:
-    return retcode;
-}
-
-static hdsdp_retcode HDSDP_PhaseB_BarPrimalRefinement( hdsdp *HSolver ) {
-    
-    /* Implement primal refinement procedure for HDSDP */
-    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
-    
-    
-    
-    
- 
 exit_cleanup:
     return retcode;
 }

@@ -2038,8 +2038,12 @@ static double dataMatRankOneDenseKKT5TraceASinvBSinvImpl( void *A, sdp_coeff *B,
             break;
         case SDP_COEFF_SPARSE:
             return KKT5Pair_RankOneDense_Sparse(dsr1, B->dataMat, Sinv, aux);
+            break;
         case SDP_COEFF_DENSE:
             return KKT5Pair_RankOneDense_Dense(dsr1, B->dataMat, Sinv, aux);
+            break;
+        case SDP_COEFF_SPR1:
+            return KKT5Pair_RankOneSparse_RankOneDense(B->dataMat, dsr1, Sinv, aux);
             break;
         case SDP_COEFF_DSR1:
             return KKT5Pair_RankOneDense_RankOneDense(dsr1, B->dataMat, Sinv, aux);

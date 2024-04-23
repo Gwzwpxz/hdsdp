@@ -17,6 +17,7 @@ extern hdsdp_retcode HFpLinsysCreate( hdsdp_linsys_fp **pHLin, int nCol, linsys_
 extern void HFpLinsysSetParam( hdsdp_linsys_fp *HLin, double relTol, double absTol, int nThreads, int maxIter, int nRestartFreq );
 extern hdsdp_retcode HFpLinsysSymbolic( hdsdp_linsys_fp *HLin, int *colMatBeg, int *colMatIdx );
 extern hdsdp_retcode HFpLinsysNumeric( hdsdp_linsys_fp *HLin, int *colMatBeg, int *colMatIdx, double *colMatElem );
+extern hdsdp_retcode HFpLinsysSwitchToBackUp( hdsdp_linsys_fp *HLin );
 extern hdsdp_retcode HFpLinsysPsdCheck( hdsdp_linsys_fp *HLin, int *colMatBeg, int *colMatIdx, double *colMatElem, int *isPsd );
 extern void HFpLinsysFSolve( hdsdp_linsys_fp *HLin, int nRhs, double *rhsVec, double *solVec );
 extern void HFpLinsysBSolve( hdsdp_linsys_fp *HLin, int nRhs, double *rhsVec, double *solVec );

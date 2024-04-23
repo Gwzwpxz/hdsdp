@@ -58,6 +58,7 @@ static hdsdp_retcode pardisoLinSolverCreate( void **pchol, int nCol ) {
     HDSDP_ZERO(pds->iparm, int, 64);
     
     int mType = PARDISO_SYM_POSDEFINITE;
+    pds->mType = mType;
     pardisoinit(pds->pt, &mType, pds->iparm);
     
     /* Non-default setting */
@@ -78,7 +79,36 @@ static hdsdp_retcode pardisoLinSolverCreate( void **pchol, int nCol ) {
     *pchol = (void *) pds;
     
 exit_cleanup:
+    return retcode;
+}
+
+static hdsdp_retcode pardisoLinSolverCreateIndefinite( void **pchol, int nCol ) {
     
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    HDSDP_NULLCHECK(pchol);
+    pardiso_linsys *pds = NULL;
+    HDSDP_INIT(pds, pardiso_linsys, 1);
+    HDSDP_MEMCHECK(pds);
+    
+    pds->nCol = nCol;
+    HDSDP_ZERO(pds->pt, void *, 64);
+    HDSDP_ZERO(pds->iparm, int, 64);
+    
+    int mType = PARDISO_SYM_INDEFINITE;
+    pds->mType = mType;
+    pardisoinit(pds->pt, &mType, pds->iparm);
+    
+    set_pardiso_param(pds->iparm, PARDISO_PARAM_NONDEFAULT, 1);
+    set_pardiso_param(pds->iparm, PARDISO_PARAM_SYMBOLIC, PARDISO_PARAM_SYMBOLIC_MMD);
+    
+    /* More perturbation for indefinite matrices */
+    set_pardiso_param(pds->iparm, PARDISO_PARAM_PERTURBATION, 8);
+    set_pardiso_param(pds->iparm, PARDISO_PARAM_INPLACE, 1);
+    set_pardiso_param(pds->iparm, PARDISO_PARAM_INDEX, PARDISO_PARAM_INDEX_C);
+    set_pardiso_param(pds->iparm, PARDISO_PARAM_DIAGONAL, PARDISO_PARAM_DIAGONAL_ON);
+    
+exit_cleanup:
     return retcode;
 }
 
@@ -105,7 +135,7 @@ static hdsdp_retcode pardisoLinSolverSymbolic( void *chol, int *colMatBeg, int *
     HDSDP_INIT(pds->dWork, double, pds->nCol);
     HDSDP_MEMCHECK(pds->dWork);
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_POSDEFINITE, phase = PARDISO_PHASE_SYM;
+    int maxfct = 1, mnum = 1, mtype = pds->mType, phase = PARDISO_PHASE_SYM;
     int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
     /* Use amd first */
@@ -172,7 +202,7 @@ static hdsdp_retcode pardisoLinSolverStableNumeric( void *chol, int *colMatBeg, 
     pds->colMatIdx = colMatIdx;
     pds->colMatElem = colMatElem;
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_POSDEFINITE, phase = PARDISO_PHASE_FAC;
+    int maxfct = 1, mnum = 1, mtype = pds->mType, phase = PARDISO_PHASE_FAC;
     int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
     set_pardiso_param(pds->iparm, PARDISO_PARAM_SCALING, 1);
@@ -201,7 +231,7 @@ static hdsdp_retcode pardisoLinSolverNumeric( void *chol, int *colMatBeg, int *c
     pds->colMatIdx = colMatIdx;
     pds->colMatElem = colMatElem;
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_POSDEFINITE, phase = PARDISO_PHASE_FAC;
+    int maxfct = 1, mnum = 1, mtype = pds->mType, phase = PARDISO_PHASE_FAC;
     int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
 #ifdef HDSDP_LINSYS_PROFILE
@@ -236,7 +266,12 @@ static hdsdp_retcode pardisoLinSolverPsdCheck( void *chol, int *colMatBeg, int *
     pds->colMatIdx = colMatIdx;
     pds->colMatElem = colMatElem;
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_POSDEFINITE, phase = PARDISO_PHASE_FAC;
+    /* Indefinite system does not have PD check */
+    if ( pds->mType != PARDISO_SYM_POSDEFINITE ) {
+        return HDSDP_RETCODE_FAILED;
+    }
+    
+    int maxfct = 1, mnum = 1, mtype = pds->mType, phase = PARDISO_PHASE_FAC;
     int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
 #ifdef HDSDP_LINSYS_PROFILE
@@ -270,7 +305,7 @@ static void pardisoLinSolverForwardN( void *chol, int nRhs, double *rhsVec, doub
     
     pardiso_linsys *pds = (pardiso_linsys *) chol;
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_POSDEFINITE, phase = PARDISO_PHASE_FORWARD;
+    int maxfct = 1, mnum = 1, mtype = pds->mType, phase = PARDISO_PHASE_FORWARD;
     int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
 #ifdef HDSDP_LINSYS_PROFILE
@@ -304,7 +339,7 @@ static void pardisoLinSolverBackwardN( void *chol, int nRhs, double *rhsVec, dou
     
     pardiso_linsys *pds = (pardiso_linsys *) chol;
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_POSDEFINITE, phase = PARDISO_PHASE_BACKWARD;
+    int maxfct = 1, mnum = 1, mtype = pds->mType, phase = PARDISO_PHASE_BACKWARD;
     int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
 #ifdef HDSDP_LINSYS_PROFILE
@@ -338,7 +373,7 @@ static hdsdp_retcode pardisoLinSolverSolveN( void *chol, int nRhs, double *rhsVe
     
     pardiso_linsys *pds = (pardiso_linsys *) chol;
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_POSDEFINITE, phase = PARDISO_PHASE_SOLVE;
+    int maxfct = 1, mnum = 1, mtype = pds->mType, phase = PARDISO_PHASE_SOLVE;
     int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
 #ifdef HDSDP_LINSYS_PROFILE
@@ -424,7 +459,7 @@ static void pardisoLinSolverClear( void *chol ) {
     
     pardiso_linsys *pds = (pardiso_linsys *) chol;
     
-    int maxfct = 1, mnum = 1, mtype = PARDISO_SYM_POSDEFINITE, phase = PARDISO_PHASE_FREE;
+    int maxfct = 1, mnum = 1, mtype = pds->mType, phase = PARDISO_PHASE_FREE;
     int idummy = 0, msg = 0, pdsret = PARDISO_RET_OK;
     
     pardiso(pds->pt, &maxfct, &mnum, &mtype, &phase,
@@ -1305,6 +1340,19 @@ extern hdsdp_retcode HFpLinsysCreate( hdsdp_linsys_fp **pHLin, int nCol, linsys_
             HLinsys->cholInvert = pardisoLinSolverInvert;
             HLinsys->cholDestroy = pardisoLinSolverDestroy;
             break;
+        case HDSDP_LINSYS_SPARSE_INDEFINITE:
+            HLinsys->cholCreate = pardisoLinSolverCreateIndefinite;
+            HLinsys->cholSetParam = pardisoLinSolverSetThreads;
+            HLinsys->cholSymbolic = pardisoLinSolverSymbolic;
+            HLinsys->cholNumeric = pardisoLinSolverNumeric;
+            HLinsys->cholPsdCheck = pardisoLinSolverPsdCheck;
+            HLinsys->cholFSolve = pardisoLinSolverForwardN;
+            HLinsys->cholBSolve = pardisoLinSolverBackwardN;
+            HLinsys->cholSolve = pardisoLinSolverSolveN;
+            HLinsys->cholGetDiag = pardisoLinSolverGetDiag;
+            HLinsys->cholInvert = pardisoLinSolverInvert;
+            HLinsys->cholDestroy = pardisoLinSolverDestroy;
+            break;
         case HDSDP_LINSYS_DENSE_ITERATIVE:
             HLinsys->cholCreate = conjGradLinSolverCreate;
             HLinsys->cholSetParam = conjGradLinSolverSetParam;
@@ -1377,6 +1425,16 @@ extern hdsdp_retcode HFpLinsysNumeric( hdsdp_linsys_fp *HLin, int *colMatBeg, in
     }
     
     HLin->nFactorizes += 1;
+    
+exit_cleanup:
+    return retcode;
+}
+
+extern hdsdp_retcode HFpLinsysSwitchToBackUp( hdsdp_linsys_fp *HLin ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    assert( HLin->LinType == HDSDP_LINSYS_SPARSE_INDEFINITE );
+    HLin->cholNumeric = pardisoLinSolverStableNumeric;
     
 exit_cleanup:
     return retcode;
