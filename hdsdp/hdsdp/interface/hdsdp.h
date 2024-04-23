@@ -27,7 +27,7 @@
 #define HDSDP_SPARSE_SCHUR_THRESHOLD (0.3)
 
 #ifndef DUMMY_KKT
-#define DUMMY_KKT
+//#define DUMMY_KKT
 #endif
 
 #ifdef MEMORY_DEBUG
