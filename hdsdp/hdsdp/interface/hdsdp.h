@@ -111,6 +111,7 @@ extern hdsdp_retcode HDSDPCreate( hdsdp **pHSolver );
 extern hdsdp_retcode HDSDPInit( hdsdp *HSolver, int nRows, int nCones );
 extern hdsdp_retcode HDSDPSetCone( hdsdp *HSolver, int iCone, void *userCone );
 extern void HDSDPSetDualObjective( hdsdp *HSolver, double *dObj );
+extern void HDSDPSetDualStart( hdsdp *HSolver, double *dStart );
 extern hdsdp_retcode HDSDPOptimize( hdsdp *HSolver, int dOptOnly );
 extern void HDSDPSetIntParam( hdsdp *HSolver, int intParam, int intParamVal );
 extern void HDSDPSetDblParam( hdsdp *HSolver, int intParam, double dblParamVal );

@@ -25,10 +25,10 @@
 #endif
 
 #define HDSDP_FREE(var) do {if (var) {free((var)); (var) = NULL;}} while (0)
-#define HDSDP_INIT(var, type, size) (var) = (type *) calloc(size, sizeof(type))
-#define HDSDP_REALLOC(var, type, size) (var) = (type *) realloc(var, sizeof(type) * (size))
-#define HDSDP_MEMCPY(dst, src, type, size) memcpy(dst, src, sizeof(type) * (size))
-#define HDSDP_ZERO(var, type, size) memset(var, 0, sizeof(type) * (size))
+#define HDSDP_INIT(var, type, size) (var) = (type *) calloc((unsigned long) (size), sizeof(type))
+#define HDSDP_REALLOC(var, type, size) (var) = (type *) realloc(var, (unsigned long) sizeof(type) * (unsigned long) (size))
+#define HDSDP_MEMCPY(dst, src, type, size) memcpy(dst, src, (unsigned long) (sizeof(type) * (unsigned long) (size)))
+#define HDSDP_ZERO(var, type, size) memset(var, 0, (unsigned long) (sizeof(type) * (unsigned long) (size)))
 #define HDSDP_NULLCHECK(var) if(!(var)) {                     \
                                 retcode = HDSDP_RETCODE_FAILED; \
                                 goto exit_cleanup;              \

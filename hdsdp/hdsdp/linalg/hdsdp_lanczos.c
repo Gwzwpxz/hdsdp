@@ -32,9 +32,9 @@ static void dArrSymmetrize( int n, double *dArray ) {
 
 static void HLanczosIPrepare( int n, double *vVec ) {
     
-    srand(n);
+    srand((unsigned int) n);
     for ( int i = 0; i < n; ++i ) {
-        srand(rand());
+        srand((unsigned int) rand());
         vVec[i] = sqrt(sqrt((rand() % 1627))) * (rand() % 2 - 0.5);
     }
     
@@ -43,9 +43,9 @@ static void HLanczosIPrepare( int n, double *vVec ) {
 
 static void HLanczosIPerturb( int n, double *vVec ) {
     
-    srand(n);
+    srand((unsigned int) n);
     for ( int i = 0; i < n; ++i ) {
-        srand(rand());
+        srand((unsigned int) rand());
         vVec[i] += 1e-03 * sqrt(sqrt((rand() % 1627))) * (rand() % 2 - 0.5);
     }
     

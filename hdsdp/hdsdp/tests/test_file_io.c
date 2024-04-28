@@ -18,6 +18,9 @@
 
 #include <math.h>
 
+int test_file_io( char *fname );
+int test_solver( char *fname );
+
 int test_file_io( char *fname ) {
     
     
@@ -73,7 +76,7 @@ int test_file_io( char *fname ) {
     for ( int iBlk = 0; iBlk < nBlks; ++iBlk ) {
         HUserDataSetConeData(SDPData, HDSDP_CONETYPE_DENSE_SDP, nConstrs, BlkDims[iBlk],
                              coneMatBeg[iBlk], coneMatIdx[iBlk], coneMatElem[iBlk]);
-        cone_type cone = HUserDataChooseCone(SDPData);
+//        cone_type cone = HUserDataChooseCone(SDPData);
         HDSDP_CALL(HConeCreate(&SDPCone, iBlk));
         
         SDPCones[iBlk] = SDPCone;
@@ -166,7 +169,7 @@ exit_cleanup:
         HDSDP_FREE(LpMatElem);
     }
     
-    return retcode;
+    return (int) retcode;
 }
 
 int test_solver( char *fname ) {
@@ -262,6 +265,6 @@ exit_cleanup:
         HDSDP_FREE(LpMatElem);
     }
     
-    return retcode;
+    return (int) retcode;
 }
 

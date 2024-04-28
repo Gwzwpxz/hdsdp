@@ -1,5 +1,6 @@
 #ifdef HEADERPATH
 #include "interface/hdsdp_conic_sdp.h"
+#include "interface/hdsdp_conic_bound.h"
 #include "interface/def_hdsdp_user_data.h"
 #include "interface/hdsdp_utils.h"
 #include "interface/def_hdsdp_schur.h"
@@ -11,6 +12,7 @@
 #include "external/hdsdp_cs.h"
 #else
 #include "hdsdp_conic_sdp.h"
+#include "hdsdp_conic_bound.h"
 #include "def_hdsdp_user_data.h"
 #include "hdsdp_utils.h"
 #include "def_hdsdp_schur.h"

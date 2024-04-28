@@ -14,13 +14,13 @@
 /* CSparse routines for reading inputs. Referenced from Tim Davis Suite Sparse*/
 void *dcs_malloc (int n, size_t size) {
     
-    return (malloc (HDSDP_MAX (n, 1) * size)) ;
+    return (malloc (HDSDP_MAX ((size_t) n, 1) * size)) ;
 }
 
 /* wrapper for calloc */
 void *dcs_calloc (int n, size_t size) {
     
-    return (calloc (HDSDP_MAX (n,1), size)) ;
+    return (calloc (HDSDP_MAX ((size_t) n,1), size)) ;
 }
 
 /* wrapper for free */
@@ -34,7 +34,7 @@ void *dcs_free (void *p) {
 void *dcs_realloc (void *p, int n, size_t size, int *ok) {
     
     void *pnew ;
-    pnew = realloc (p, HDSDP_MAX (n,1) * size) ; /* realloc the block */
+    pnew = realloc (p, HDSDP_MAX ((size_t) n,1) * size) ; /* realloc the block */
     *ok = (pnew != NULL) ;                  /* realloc fails if pnew is NULL */
     return ((*ok) ? pnew : p) ;             /* return original p if failure */
 }

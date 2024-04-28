@@ -25,6 +25,7 @@ typedef enum {
     HDSDP_LINSYS_SMALL_DIRECT, /* Tailored for extremely small cones of size <= 3 */
     HDSDP_LINSYS_SPARSE_DIRECT,
     HDSDP_LINSYS_SPARSE_INDEFINITE,
+    HDSDP_LINSYS_SPARSE_ITERATIVE,
     
     /* Iterative solver is only used for Schur complement */
     HDSDP_LINSYS_DENSE_ITERATIVE,

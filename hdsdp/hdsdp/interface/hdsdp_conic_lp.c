@@ -1,6 +1,7 @@
 #ifdef HEADERPATH
 #include "interface/def_hdsdp.h"
 #include "interface/hdsdp_conic_sdp.h"
+#include "interface/hdsdp_conic_lp.h"
 #include "interface/def_hdsdp_user_data.h"
 #include "interface/hdsdp_utils.h"
 #include "interface/def_hdsdp_schur.h"
@@ -13,6 +14,7 @@
 #else
 #include "def_hdsdp.h"
 #include "hdsdp_conic_sdp.h"
+#include "hdsdp_conic_lp.h"
 #include "def_hdsdp_user_data.h"
 #include "hdsdp_utils.h"
 #include "def_hdsdp_schur.h"
@@ -447,14 +449,14 @@ extern hdsdp_retcode LPConeAddStepToBufferAndCheck( hdsdp_cone_lp *cone, double 
     return HDSDP_RETCODE_OK;
 }
 
-extern void LPConeGetPrimal( hdsdp_cone_lp *cone, double dBarrierMu, double *dRowDual, double *dRowDualStep, double *dConePrimal, double *dAuxiMat ) {
+extern hdsdp_retcode LPConeGetPrimal( hdsdp_cone_lp *cone, double dBarrierMu, double *dRowDual, double *dRowDualStep, double *dConePrimal, double *dAuxiMat ) {
     
     int isInterior = 0;
     LPConeInteriorCheckExpert(cone, 1.0, -1.0, dRowDual, 0.0, BUFFER_DUALCHECK, &isInterior);
     
     if ( !isInterior ) {
         hdsdp_printf("Recovery step is infeasible\n");
-        return;
+        return HDSDP_RETCODE_FAILED;
     }
     
     LPConeIUpdateBuffer(cone, 0.0, 1.0, dRowDualStep, 0.0, BUFFER_DUALSTEP);
@@ -466,7 +468,7 @@ extern void LPConeGetPrimal( hdsdp_cone_lp *cone, double dBarrierMu, double *dRo
                             (cone->colDualChecker[iCol] * cone->colDualChecker[iCol]);
     }
     
-    return;
+    return HDSDP_RETCODE_OK;
 }
 
 extern void LPConeGetDual( hdsdp_cone_lp *cone, double *dConeDual, double *ddummy ) {

@@ -4,69 +4,164 @@
 #ifdef HEADERPATH
 #include "interface/hdsdp_utils.h"
 #include "linalg/hdsdp_linsolver.h"
+#include "interface/def_hdsdp_lpkkt.h"
 #else
 #include "hdsdp_utils.h"
 #include "hdsdp_linsolver.h"
+#include "def_hdsdp_lpkkt.h"
 #endif
+
+
+typedef enum {
+    
+    LP_ITER_MEHROTRA,
+    LP_ITER_PRIMAL,
+    LP_ITER_HSD
+    
+} lp_method;
+
+typedef enum {
+    
+    SCAL_RUIZ,
+    SCAL_GEOMETRIC,
+    SCAL_L2NORM
+    
+} scal_method;
 
 typedef struct {
     
+    /* Tolerance of LP solver */
+    double dAbsOptTol;
+    double dAbsFeasTol;
+    double dRelOptTol;
+    double dRelFeasTol;
+    
+    /* KKT regularization */
+    double dKKTPrimalReg;
+    double dKKTDualReg;
+    
+    /* Potential parameter */
+    double dPotentialRho;
+    
+    /* Threads for linear system */
     int nThreads;
     
-    int nCol;
-    int nRow;
+    /* Maximum iteration */
+    int nMaxIter;
     
+    /* Scaling */
+    scal_method iScalMethod;
+    int nScalIter;
+    
+    /* Whether primal method is on */
+    int iPrimalMethod;
+    
+    /* LP method */
+    lp_method LpMethod;
+    
+    /* Primal and dual update */
+    double dPrimalUpdateStep;
+    double dDualUpdateStep;
+    
+    /* Tolerance of iterative solver */
+    double dIterativeTol;
+    /* Threshold of scaling matrix check */
+    double dScalingThreshTol;
+    /* Threshold of scaling matrix check */
+    double dScalingUpdateTol;
+    /* Lower bound of barrier parameter*/
+    double dBarrierLowerBnd;
+    
+} hdsdp_lpsolver_params;
+
+typedef struct {
+    
+    hdsdp_lpsolver_params *params;
+    
+    int nCol;
+    double *dPrimalIterHistory;
+    double *dPrimalMuHistory;
+    double dCondNumberEst;
+    double dIterDiffMetric;
+    double dIterDiffMetricScal;
+    
+} hdsdp_primal_stats;
+
+typedef struct {
+    
+    int nRow;
+    int nCol;
+    int nElem;
+    
+    /* LP Coefficient matrix and its transpose */
     int *colMatBeg;
     int *colMatIdx;
     double *colMatElem;
     
-    int *AugBeg;
-    int *AugIdx;
-    double *AugElem;
+    int *colMatTransBeg;
+    int *colMatTransIdx;
+    double *colMatTransElem;
     
-    double *colBackup;
+    /* Coefficient vectors */
+    double *dRowRhs;
+    double *dColObj;
     
-    hdsdp_linsys *kkt; ///< Indefinite augmented system
+    /* Scaling vector */
+    double *dColScal;
+    double *dRowScal;
     
-    /* Algorithm parameters */
-    double alpha;
-    double beta;
-    double gamma;
-    double mu;
+    hdsdp_lpsolver_params params;
+    hdsdp_primal_stats *stats;
     
-    /* Intermediate arrays */
-    double *dd; ///< Size n
-    double *xse; ///< Size n
-    double *d1; ///< Size m + n
-    double *d2; ///< Size m + n
-    double *daux; ///< Size m + n
+    /* Solution status */
+    hdsdp_status LpStatus;
     
-    /* Consecutive memory for [dx; dy; ds] */
-    double *dx;
-    double *dy;
-    double *ds;
-    double *dxcorr;
-    double *dycorr;
-    double *dscorr;
+    /* x */
+    double *dColVal;
+    /* s */
+    double *dColDual;
+    /* y */
+    double *dRowDual;
     
-    double dkappa;
-    double dkappacorr;
-    double dtau;
-    double dtaucorr;
+    /* A * x - b * tau */
+    double *dPrimalInfeasVec;
     
-    /* Primal-dual regularization of the augmented system */
-    double pReg;
-    double dReg;
+    /* A' * y + s - c * tau */
+    double *dDualInfeasVec;
     
-    /* Signal for ill-conditioning Newton */
-    int badNewton;
+    /* XSe */
+    double *dComplVec;
     
-    /* Type of corrector used.
-     0: no corrector
-     1: Mehrotra's corrector
-     2: Multiple centrality corrector
-     */
-    int iterType;
+    /* Scaling matrix */
+    double *dScalingMatrix;
+    
+    hdsdp_lp_kkt *Hkkt;
+    
+    double pStep;
+    double dStep;
+    
+    double pObjVal;
+    double dObjVal;
+    double dPrimalDualGap;
+    
+    double dBarrierMu;
+    
+    double *dColValDirection;
+    double *dRowDualDirection;
+    double *dColDualDirection;
+    
+    double *dAuxiColVector1;
+    double *dAuxiColVector2;
+    double *dAuxiColVector3;
+    double *dAuxiRowVector1;
+    double *dAuxiRowVector2;
+    
+    /* Self-dual embedding */
+    double dKappa;
+    double dTau;
+    
+    double dKappaDirection;
+    double dTauDirection;
 
 } hdsdp_lpsolver;
 

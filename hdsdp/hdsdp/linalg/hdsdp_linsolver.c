@@ -1469,6 +1469,17 @@ extern hdsdp_retcode HFpLinsysSolve( hdsdp_linsys_fp *HLin, int nRhs, double *rh
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
     retcode = HLin->cholSolve(HLin->chol, nRhs, rhsVec, solVec);
     
+    /* Check NAN */
+    if ( solVec ) {
+        if ( solVec[0] != solVec[0] ) {
+            retcode = HDSDP_RETCODE_FAILED;
+        }
+    }
+    
+    if ( rhsVec[0] != rhsVec[0] ) {
+        retcode = HDSDP_RETCODE_FAILED;
+    }
+    
     if ( retcode != HDSDP_RETCODE_OK && HLin->LinType == HDSDP_LINSYS_DENSE_ITERATIVE ) {
         hdsdp_printf("KKT system is unstable. Switch to LDL. \n");
         HDSDP_CALL(HFpLinsysSwitchToIndefinite(HLin));

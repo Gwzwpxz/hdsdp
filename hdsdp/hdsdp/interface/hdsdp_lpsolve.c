@@ -7,684 +7,403 @@
 #include "interface/hdsdp_utils.h"
 #include "interface/hdsdp_linsolver.h"
 #include "interface/hdsdp_lpsolve.h"
+#include "interface/hdsdp_lpkkt.h"
 #include "linalg/vec_opts.h"
 #else
 #include "hdsdp_utils.h"
 #include "hdsdp_linsolver.h"
 #include "hdsdp_lpsolve.h"
+#include "hdsdp_lpkkt.h"
 #include "vec_opts.h"
 #endif
 
 #include <math.h>
 
-#define PREGULARIZER (1.8190e-12)
-#define DREGULARIZER (1.4901e-08)
+#define PRIMAL_HISTORY  (3)
 
-/* Corrector types */
-#define NOCORR_HSD        (-1)
-#define PDIPM_HSD         ( 0)
-#define MEHROTRA_HSD      ( 1)
-#define MEHROTRA          ( 2)
-#define PRIMAL            ( 3)
-
-#define HDSDP_DIV(x, y) ((x) / (y))
-
-static double LpNewtonIBarrier( int nCol, double *x, double *s, double kappa, double tau ) {
-    
-    double mu = kappa * tau;
-    for ( int i = 0; i < nCol; ++i ) {
-        mu += x[i] * s[i];
-    }
-    
-    return mu / (nCol + 1);
-}
-
-static double LpNewtonIRatioTest( int nCol, double *x, double *dx, double *s, double *ds,
-                                  double kappa, double dkappa, double tau, double dtau ) {
-    
-    /* 1 / abs(min([dx./x; ds./s; dkappa / kappa; dtau./tau])) */
-    double alphaTmp = HDSDP_INFINITY;
-    double ratio;
-    
-    for ( int i = 0; i < nCol; ++i ) {
-        ratio = dx[i] / x[i];
-        alphaTmp = HDSDP_MIN(ratio, alphaTmp);
-    }
-    
-    for ( int i = 0; i < nCol; ++i ) {
-        ratio = ds[i] / s[i];
-        alphaTmp = HDSDP_MIN(ratio, alphaTmp);
-    }
-    
-    ratio = dkappa / kappa;
-    alphaTmp = HDSDP_MIN(ratio, alphaTmp);
-    
-    ratio = dtau / tau;
-    alphaTmp = HDSDP_MIN(ratio, alphaTmp);
-    
-    return fabs(1.0 / alphaTmp);
-}
-
-static void LpNewtonUpdate( hdsdp_lpsolver *newton, double *rowDual, double *colVal, double *colDual,
-                            double *kappa, double *tau, double spxSize ) {
-    
-    for ( int i = 0; i < newton->nCol; ++i ) {
-        colVal[i] += newton->alpha * newton->dx[i];
-        colDual[i] += newton->alpha * newton->ds[i];
-    }
-    
-    for ( int i = 0; i < newton->nRow; ++i ) {
-        rowDual[i] += newton->alpha * newton->dy[i];
-    }
-    
-    
-    if ( spxSize > 0.0 ) {
-        *kappa += newton->alpha * newton->dkappa;
-        *tau += newton->alpha * newton->dtau;
-        
-        double simp = (*kappa) + (*tau);
-        
-        for ( int i = 0; i < newton->nCol; ++i ) {
-            simp += colVal[i];
-            simp += colDual[i];
-        }
-        
-        simp = spxSize / simp;
-        
-        scal(&newton->nRow, &simp, rowDual, &HIntConstantOne);
-        scal(&newton->nCol, &simp, colVal, &HIntConstantOne);
-        scal(&newton->nCol, &simp, colDual, &HIntConstantOne);
-        
-        *kappa *= simp;
-        *tau *= simp;
-    }
-
-    return;
-}
-
-/* KKT solver */
-static hdsdp_retcode LpNewtonIKKTInit( hdsdp_lpsolver *newton, int nCol, int nRow, int *colMatBeg,
-                                 int *colMatIdx, double *colMatElem ) {
+static hdsdp_retcode HPrimalStatsCreate( hdsdp_primal_stats **pStats ) {
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
     
-    int nzA = colMatBeg[nCol];
-    int ntCol = nRow + nCol;
-    int ntNnz = nzA + nCol + nRow;
-    
-    /*
-       [ D^2  A']  +  [ Rp  0  ]
-       [ A    0 ]  +  [ 0   Rd ]
-     */
-    
-    /* Elements of D, A and potential regularizers */
-    HDSDP_INIT(newton->AugBeg, int, ntCol + 1);
-    HDSDP_INIT(newton->AugIdx, int, ntNnz);
-    HDSDP_INIT(newton->AugElem, double, ntNnz);
-    
-    if ( !newton->AugBeg || !newton->AugIdx || !newton->AugElem ) {
+    if ( !pStats ) {
         retcode = HDSDP_RETCODE_FAILED;
         goto exit_cleanup;
     }
     
-    int *Ap = newton->AugBeg;
-    int *Ai = newton->AugIdx;
-    double  *Ax = newton->AugElem;
+    hdsdp_primal_stats *stats = NULL;
+    HDSDP_INIT(stats, hdsdp_primal_stats, 1);
+    HDSDP_MEMCHECK(stats);
+    HDSDP_ZERO(stats, hdsdp_primal_stats, 1);
     
-    newton->colMatBeg = Ap;
-    newton->colMatIdx = Ai;
-    newton->colMatElem = Ax;
+    *pStats = stats;
+ 
+exit_cleanup:
+    return retcode;
+}
+
+static hdsdp_retcode HPrimalStatsInit( hdsdp_primal_stats *stats, int nCol, hdsdp_lpsolver_params *params ) {
     
-    /* Build up symbolic matrix */
-    for ( int i = 0, j; i < nCol; ++i ) {
-        Ap[i] = colMatBeg[i] + i;
-        Ai[Ap[i]] = i;
-        for ( j = colMatBeg[i]; j < colMatBeg[i + 1]; ++j ) {
-            Ai[i + j + 1] = colMatIdx[j] + nCol;
-            Ax[i + j + 1] = colMatElem[j];
-        }
-    }
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
     
-    Ap[nCol] = nzA + nCol;
-    for ( int i = 0; i < nRow; ++i ) {
-        Ap[i + nCol + 1] = Ap[i + nCol] + 1;
-        Ai[Ap[nCol] + i] = nCol + i;
-    }
-    
-    /* Create Pardiso solver and run symbolic factorization */
-    HDSDP_CALL(HFpLinsysCreate(&newton->kkt, nCol, HDSDP_LINSYS_DENSE_INDEFINITE));
-    HFpLinsysSetParam(newton->kkt, -1, -1, newton->nThreads, -1, -1);
-    HDSDP_CALL(HFpLinsysSymbolic(newton->kkt, Ap, Ai));
+    stats->params = params;
+    stats->nCol = nCol;
+    HDSDP_INIT(stats->dPrimalMuHistory, double, params->nMaxIter);
+    HDSDP_INIT(stats->dPrimalIterHistory, double, PRIMAL_HISTORY * nCol);
+    HDSDP_MEMCHECK(stats->dPrimalIterHistory);
     
 exit_cleanup:
     return retcode;
 }
 
-static void LpNewtonIKKTLoad( hdsdp_lpsolver *newton, double *colVal, double *colDual ) {
+static void HPrimalStatsUpdate( hdsdp_primal_stats *stats, int iIter, double *dColVal, double dMu ) {
     
-    /* Load Newton system */
-    if ( colDual ) {
-        /* Primal-dual KKT system */
-        for ( int iCol = 0; iCol < newton->nCol; ++iCol ) {
-            newton->AugElem[newton->AugBeg[iCol]] = HDSDP_DIV(colDual[iCol], colVal[iCol]);
-        }
-    } else {
-        for ( int iCol = 0; iCol < newton->nCol; ++iCol ) {
-            newton->AugElem[newton->AugBeg[iCol]] = 1.0;
-            for ( int iElem = newton->AugBeg[iCol] + 1; iElem < newton->AugBeg[iCol + 1]; ++iElem ) {
-                newton->AugElem[iElem] = newton->colMatElem[iElem - iCol] * colVal[iCol];
-            }
-        }
-    }
+    HDSDP_MEMCPY(stats->dPrimalIterHistory + stats->nCol,
+                 stats->dPrimalIterHistory, double, stats->nCol);
+    HDSDP_MEMCPY(stats->dPrimalIterHistory, dColVal, double, stats->nCol);
+    stats->dPrimalMuHistory[iIter] = dMu;
+    
+    /* Compute convergence statistics */
     
     return;
 }
 
-static void LpNewtonIKKTRegularize( hdsdp_lpsolver *newton, double pReg, double dReg ) {
+static int HPrimalStatsSuperlinerTest( hdsdp_primal_stats *stats ) {
     
-    /* Regularize the augmented system with
-     
-            [ Rp   0 ]
-            [  0  Rd ]
-     */
+    int isSuperLin = 0;
     
-    /* Regularize primal. First entries of initial nCol columns */
-    if ( pReg > 0.0 ) {
-        for ( int i = 0; i < newton->nCol; ++i ) {
-            newton->AugElem[newton->AugBeg[i]] += pReg;
-        }
-    }
-    
-    /* Regularize dual. Last n entries of the CSC representation of lower-triangular part */
-    if ( dReg > 0.0 ) {
-        int nNtCol = newton->nCol + newton->nRow;
-        for ( int i = 0; i < newton->nRow; ++i ) {
-            newton->AugElem[newton->AugBeg[nNtCol - i - 1]] = dReg;
-        }
-    }
-    
-    return;
+    return isSuperLin;
 }
 
-static hdsdp_retcode LpNewtonIKKTFactorize( hdsdp_lpsolver *newton ) {
+static void HPrimalStatsClear( hdsdp_primal_stats *stats ) {
     
-    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
-    HDSDP_CALL(HFpLinsysNumeric(newton->kkt, newton->AugBeg, newton->AugIdx, newton->AugElem));
-    
-exit_cleanup:
-    return retcode;
-}
-
-static hdsdp_retcode LpNewtonIKKTPrimalSolve( hdsdp_lpsolver *newton, double *lpObj, double *lpRHS, double *colVal, double *colDual, 
-                                              double *resiPrimal, double *resiDual, double *resiMu1 ) {
-    
-    /* KKT solver for the primal augmented system
-     
-      [ I   AX' ] [ dx'] = [ -v .* rd / mu + x .* s / mu ]
-      [ AX   0  ] [ dy'] = [               rp            ]
-     
-     After the system is solved, we recover the primal and dual directions by
-     
-        dx = - v .* dx
-        dy = mu * dy'
-        ds = -rd - A' * dy
-     
-    */
-    
-    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
-    
-    
-    
-exit_cleanup:
-    return retcode;
-}
-
-static hdsdp_retcode LpNewtonIKKTSolve( hdsdp_lpsolver *newton, double *lpObj, double *lpRHS, double *colVal, double *colDual,
-                                  double kappa, double tau, double *resiPrimal, double *resiDual, double resiComp,
-                                  double *resiMu1, double resiMu2, int isCorr ) {
-    
-    /* KKT solver for the augmented system
-     
-     [     A          -b ] [ dy ] = - [  rp ] -> m
-     [ -A'      -I     c ] [ dx ] = - [  rd ] -> n
-     [  b'   -c'   -1    ] [ ds ] = - [  rk ] -> 1
-     [        S     X    ] [ dk ] = - [ rm1 ] -> n
-     [              t  k ] [ dt ] = - [ rm2 ] -> 1
-     
-     The KKT solver reduces the system into
-     
-     [ X^{-1} S  A' ]
-     [   A       0  ]
-     
-     and performs backward substitution to recover the directions.
-     The directions are stored into the solver [dx, dy, ds, dkappa, dtau]
-     
-     If isCorr is true, then d1 = M \ [-c, b]' is reused in computing the corrector step
-     and the directions are stored in [ dxcorr, dycorr, dscorr, dkappacorr, dtaucorr ]
-     
-    */
-    
-    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
-    
-    double *dx = NULL;
-    double *dy = NULL;
-    double *ds = NULL;
-    double *dkappa = NULL;
-    double *dtau = NULL;
-    
-    if ( isCorr ) {
-        dx = newton->dxcorr;
-        dy = newton->dycorr;
-        ds = newton->dscorr;
-        dkappa = &newton->dkappacorr;
-        dtau = &newton->dtaucorr;
-    } else {
-        dx = newton->dx;
-        dy = newton->dy;
-        ds = newton->ds;
-        dkappa = &newton->dkappa;
-        dtau = &newton->dtau;
-    }
-    
-    /* Set up d1 */
-    if ( !isCorr ) {
-        for ( int i = 0; i < newton->nCol; ++i ) {
-            newton->d1[i] = - lpObj[i];
-        }
-        HDSDP_MEMCPY(newton->d1 + newton->nCol, lpRHS, double, newton->nRow);
-    }
-    
-    /* Set up d2 */
-    HDSDP_ZERO(newton->d2, double, newton->nCol + newton->nRow);
-    
-    if ( resiDual ) {
-        HDSDP_MEMCPY(newton->d2, resiDual, double, newton->nCol);
-    }
-    
-    if ( resiMu1 ) {
-        for ( int i = 0; i < newton->nCol; ++i ) {
-            newton->d2[i] += HDSDP_DIV(resiMu1[i], colVal[i]);
-        }
-    }
-    
-    if ( resiPrimal ) {
-        HDSDP_MEMCPY(newton->d2 + newton->nCol, resiPrimal, double, newton->nRow);
-    }
-    
-    /* Solve for d1 and d2 */
-    if ( !isCorr ) {
-        HDSDP_CALL(HFpLinsysSolve(newton->kkt, 1, newton->d1, NULL));
-    }
-    HDSDP_CALL(HFpLinsysSolve(newton->kkt, 1, newton->d2, NULL));
-    
-    /* Retreive the directions */
-    double cbTd1 = 0.0;
-    double cbTd2 = 0.0;
-    
-    for ( int i = 0; i < newton->nCol; ++i ) {
-        cbTd1 += lpObj[i] * newton->d1[i];
-        cbTd2 += lpObj[i] * newton->d2[i];
-    }
-    
-    for ( int i = 0; i < newton->nRow; ++i ) {
-        cbTd1 += lpRHS[i] * newton->d1[newton->nCol + i];
-        cbTd2 += lpRHS[i] * newton->d2[newton->nCol + i];
-    }
-    
-    double dTauDenom = kappa - cbTd1 * tau;
-    double dTauNumer = - (cbTd2 * tau + resiComp * tau + resiMu2);
-    
-    if ( fabs(dTauDenom) > 1e-10 ) {
-        *dtau = dTauNumer / dTauDenom;
-    } else {
-        if ( dTauDenom < 0 ) {
-            *dtau = -HDSDP_DIV(dTauNumer, -dTauDenom);
-        } else {
-            *dtau = HDSDP_DIV(dTauNumer, dTauDenom);
-        }
-    }
-    
-    /* Recover dx and dy */
-    for ( int i = 0; i < newton->nCol; ++i ) {
-        dx[i] = newton->d1[i] * (*dtau) - newton->d2[i];
-        ds[i] = - dx[i] * HDSDP_DIV(colDual[i], colVal[i]);
-    }
-    
-    if ( resiMu1 ) {
-        for ( int i = 0; i < newton->nCol; ++i ) {
-            ds[i] -= HDSDP_DIV(resiMu1[i], colVal[i]);
-        }
-    }
-    
-    for ( int i = 0; i < newton->nRow; ++i ) {
-        dy[i] = newton->d2[i + newton->nCol] - newton->d1[i + newton->nCol] * (*dtau);
-    }
-    
-    *dkappa = - kappa * (*dtau) - resiMu2;
-    *dkappa = HDSDP_DIV(*dkappa, tau);
-    
-    /* Overflow from pardiso */
-    if ( *dkappa > HDSDP_INFINITY || *dkappa < -HDSDP_INFINITY || (*dkappa != *dkappa) ) {
-        retcode = HDSDP_RETCODE_FAILED;
-    }
-    
-exit_cleanup:
-    
-    return retcode;
-}
-
-static void LpNewtonIRegularize( int nCol, int nRow, int nNtCol, int *augMatBeg,
-                                int *augMatIdx, double *augMatElem, double pReg, double dReg ) {
-    
-    /* Regularize the augmented system with
-     
-            [ Rp   0 ]
-            [  0  Rd ]
-     */
-    
-    /* Regularize primal. First entries of initial nCol columns */
-    if ( pReg > 0 ) {
-        for ( int i = 0; i < nCol; ++i ) {
-            augMatElem[augMatBeg[i]] += pReg;
-        }
-    }
-    
-    /* Regularize dual. Last n entries of the CSC representation of lower-triangular part */
-    if ( dReg > 0 ) {
-        for ( int i = 0; i < nRow; ++i ) {
-            augMatElem[augMatBeg[nNtCol] - i - 1] = dReg;
-        }
-    }
-    
-    return;
-}
-
-extern hdsdp_retcode LpNewtonCreate( hdsdp_lpsolver **pnewton, int nThreads ) {
-    
-    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
-    
-    if ( !pnewton ) {
-        retcode = HDSDP_RETCODE_FAILED;
-        goto exit_cleanup;
-    }
-    
-    hdsdp_lpsolver *nt = NULL;
-    HDSDP_INIT(nt, hdsdp_lpsolver, 1);
-    
-    if ( !nt ) {
-        retcode = HDSDP_RETCODE_FAILED;
-        goto exit_cleanup;
-    }
-    
-    HDSDP_ZERO(nt, hdsdp_lpsolver, 1);
-    
-    nt->beta = 0.99;
-    nt->gamma = 0.7;
-    nt->badNewton = 0;
-    nt->pReg = PREGULARIZER;
-    nt->dReg = DREGULARIZER;
-    nt->nThreads = nThreads;
-    
-    *pnewton = nt;
-    
-exit_cleanup:
-    return retcode;
-}
-
-extern hdsdp_retcode LpNewtonInit( hdsdp_lpsolver *newton, int nCol, int nRow, int *colMatBeg, int *colMatIdx, double *colMatElem ) {
-    
-    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
-    
-    newton->nCol = nCol;
-    newton->nRow = nRow;
-    
-    /* Initialize KKT solver. We place KKT solver within the LP Newton structure */
-    HDSDP_CALL(LpNewtonIKKTInit(newton, nCol, nRow, colMatBeg, colMatIdx, colMatElem));
-    
-    /* Initialize vectors */
-    HDSDP_INIT(newton->dd, double, nCol);
-    HDSDP_INIT(newton->d1, double, nCol + nRow);
-    HDSDP_INIT(newton->d2, double, nCol + nRow);
-    HDSDP_INIT(newton->daux, double, nCol + nRow);
-    
-    HDSDP_INIT(newton->dx, double, 2 * nCol + nRow);
-    HDSDP_INIT(newton->dxcorr, double, 2 * nCol + nRow);
-    
-    newton->dy = newton->dx + nCol;
-    newton->ds = newton->dy + nRow;
-    
-    newton->dycorr = newton->dxcorr + nCol;
-    newton->dscorr = newton->dycorr + nRow;
-    
-    newton->iterType = MEHROTRA_HSD;
-    
-    if ( !newton->dd || !newton->d1 || !newton->d2 || !newton->daux || !newton->dx ||
-         !newton->dycorr || !newton->dscorr ) {
-        retcode = HDSDP_RETCODE_FAILED;
-        goto exit_cleanup;
-    }
-    
-exit_cleanup:
-    return retcode;
-}
-
-/** @brief Implement one Newton's step
- * Currently no centering step is taken. On exit, colVal, rowDual, colDual, kappa, tau are modified
- */
-extern hdsdp_retcode LpNewtonOneStep( hdsdp_lpsolver *newton, double *lpObj, double *lpRHS, int *colMatBeg, int *colMatIdx, double *colMatElem,
-                                double *colVal, double *rowDual, double *colDual, double *kappa, double *tau,
-                                double *pRes, double *dRes, double pObjVal, double dObjVal, double spxSize ) {
-    
-    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
-    
-    if ( !newton ) {
-        goto exit_cleanup;
-    }
-    
-    int nCol = newton->nCol;
-    int nRow = newton->nRow;
-    
-    /* Prepare iteration */
-    double kval = *kappa, tval = *tau;
-    double *x = colVal, *s = colDual;
-    double alpha = 0.0, beta = newton->beta, gamma = newton->gamma;
-    double *daux = newton->daux;
-    double *dx = newton->dx, *dy = newton->dy, *ds = newton->ds;
-    double dkappa = 0.0, dtau = 0.0;
-    double mu = LpNewtonIBarrier(nCol, x, s, kval, tval);
-    newton->mu = mu;
-    
-    /* Add regularization */
-    double pReg = HDSDP_MIN(mu * 1e-04, PREGULARIZER);
-    
-    if ( pReg < 1e-15 ) {
-        pReg = 0.0;
-    }
-    
-    double dReg = pReg;
-    newton->pReg = pReg;
-    newton->dReg = dReg;
-    dReg = HDSDP_MIN(dReg, DREGULARIZER);
-    
-    if ( newton->iterType == PRIMAL ) {
-        LpNewtonIKKTLoad(newton, colVal, NULL);
-        pReg = 0.0;
-        dReg = 0.0;
-    } else {
-        LpNewtonIKKTLoad(newton, colVal, colDual);
-    }
-    
-    LpNewtonIKKTRegularize(newton, pReg, 0.0);
-    
-    /* Factorize the augmented system */
-    HDSDP_CALL(LpNewtonIKKTFactorize(newton));
-    
-    if ( newton->iterType == PDIPM_HSD ) {
-        
-        double xsi = 0.0;
-        double xinvsi = 0.0;
-        double minXSi = kval * tval;
-        double minXinvSi = HDSDP_INFINITY;
-        
-        for ( int i = 0; i < nCol; ++i ) {
-            xsi = x[i] * s[i];
-            xinvsi = x[i] / s[i];
-            minXinvSi = HDSDP_MIN(xinvsi, minXinvSi);
-            minXSi = HDSDP_MIN(minXSi, xsi);
-        }
-        
-        double ksi = minXSi / mu;
-        newton->gamma = (1 - ksi) / ksi;
-        newton->gamma = 0.05 * newton->gamma;
-        newton->gamma = 0.1 * newton->gamma * newton->gamma * newton->gamma;
-        newton->gamma = HDSDP_MIN(0.8, newton->gamma);
-        newton->gamma = HDSDP_MAX(0.1, newton->gamma);
-        
-        double mugamma = mu * gamma;
-        double resiMu2 = kval * tval - mugamma;
-        
-        for ( int i = 0; i < nCol; ++i ) {
-            daux[i] = x[i] * s[i] - mugamma;
-        }
-        
-        HDSDP_CALL(LpNewtonIKKTSolve(newton, lpObj, lpRHS, colVal, colDual, kval, tval, pRes,
-                                   dRes, dObjVal - pObjVal - kval, daux, resiMu2, 0));
-        
-        
-    } else if ( newton->iterType == MEHROTRA_HSD ) {
-        
-        /* Predictor step */
-        double resiMu2 = kval * tval;
-        for ( int i = 0; i < nCol; ++i ) {
-            daux[i] = x[i] * s[i];
-        }
-        
-        HDSDP_CALL(LpNewtonIKKTSolve(newton, lpObj, lpRHS, colVal, colDual, kval, tval, pRes,
-                                   dRes, dObjVal - pObjVal - kval, daux, resiMu2, 0));
-        alpha = LpNewtonIRatioTest(nCol, x, newton->dx, s, newton->ds, kval,
-                                   newton->dkappa, tval, newton->dtau);
-        
-        double muAff = ( kval + alpha * newton->dkappa ) * ( tval + alpha * newton->dtau );
-        
-        /* Compute sigma */
-        for ( int i = 0; i < nCol; ++i ) {
-            muAff += ( x[i] + alpha * newton->dx[i] ) * ( s[i] + alpha * newton->ds[i] );
-        }
-        
-        muAff = muAff / ( nCol + 1 );
-        gamma = HDSDP_DIV(muAff, mu);
-        gamma = gamma * gamma * gamma;
-        
-        if ( mu < 1e-10 ) {
-            gamma = HDSDP_MAX(gamma, 0.3);
-        }
-        
-#ifdef IPM_DEBUG
-        printf("Mehrotra gamma: %f ", gamma);
-#endif
-        
-        double mugamma = mu * gamma;
-        
-        /* Corrector step */
-        resiMu2 = newton->dkappa * newton->dtau - mugamma;
-        for ( int i = 0; i < nCol; ++i ) {
-            daux[i] = newton->dx[i] * newton->ds[i] - mugamma;
-        }
-        
-        HDSDP_CALL(LpNewtonIKKTSolve(newton, lpObj, lpRHS, colVal, colDual, kval, tval,
-                                   NULL, NULL, 0.0, daux, resiMu2, 1));
-        
-        /* Combine predictor and corrector */
-        newton->dkappa += newton->dkappacorr;
-        newton->dtau += newton->dtaucorr;
-        for ( int i = 0; i < nCol; ++i ) {
-            dx[i] += newton->dxcorr[i];
-            ds[i] += newton->dscorr[i];
-        }
-        
-        for ( int i = 0; i < nRow; ++i ) {
-            dy[i] += newton->dycorr[i];
-        }
-        
-    } else if ( newton->iterType == NOCORR_HSD ) {
-                
-        newton->gamma = 0.8;
-        newton->beta = 0.1;
-        
-        double mugamma = mu * gamma;
-        double resiMu2 = kval * tval - mugamma;
-        
-        for ( int i = 0; i < nCol; ++i ) {
-            daux[i] = x[i] * s[i] - mugamma;
-        }
-        
-        HDSDP_CALL(LpNewtonIKKTSolve(newton, lpObj, lpRHS, colVal, colDual, kval, tval, pRes,
-                                   dRes, dObjVal - pObjVal - kval, daux, resiMu2, 0));
-    }
-    
-    dkappa = newton->dkappa;
-    dtau = newton->dtau;
-    alpha = LpNewtonIRatioTest(nCol, x, dx, s, ds, kval, dkappa, tval, dtau);
-    
-    if ( alpha < 1e-04 ) {
-        if ( newton->badNewton >= 2 ) {
-            retcode = HDSDP_RETCODE_FAILED;
-            goto exit_cleanup;
-        } else {
-            /* Try to rescue the system using scaling and matching */
-            HFpLinsysSwitchToBackUp(newton->kkt);
-            newton->badNewton += 1;
-        }
-    }
-    
-    alpha = alpha * beta;
-    alpha = HDSDP_MIN(alpha, 1.0);
-    newton->alpha = alpha;
-    LpNewtonUpdate(newton, rowDual, colVal, colDual, kappa, tau, spxSize);
-    
-#ifdef IPM_DEBUG
-    printf("Mu: %10.3e Barrier stepsize: %f \n", mu, alpha);
-#endif
-    
-exit_cleanup:
-    return retcode;
-}
-
-extern void LpNewtonClear( hdsdp_lpsolver *newton ) {
-    
-    if ( !newton ) {
+    if ( !stats ) {
         return;
     }
     
-    HFpLinsysDestroy(&newton->kkt);
-    
-    HDSDP_FREE(newton->AugBeg);
-    HDSDP_FREE(newton->AugIdx);
-    HDSDP_FREE(newton->AugElem);
-    HDSDP_FREE(newton->colBackup);
-    
-    HDSDP_FREE(newton->dd);
-    HDSDP_FREE(newton->xse);
-    HDSDP_FREE(newton->d1);
-    HDSDP_FREE(newton->d2);
-    HDSDP_FREE(newton->daux);
-    
-    /* dy and ds are following dx and we do need to free them */
-    HDSDP_FREE(newton->dx);
-    HDSDP_FREE(newton->dxcorr);
-    
-    HDSDP_ZERO(newton, hdsdp_lpsolver, 1);
+    HDSDP_FREE(stats->dPrimalIterHistory);
+    HDSDP_FREE(stats->dPrimalMuHistory);
+    HDSDP_ZERO(stats, hdsdp_primal_stats, 1);
+
     return;
 }
 
-extern void LpNewtonDestroy( hdsdp_lpsolver **pnewton ) {
+static void HPrimalStatsDestroy( hdsdp_primal_stats **pStats ) {
     
-    if ( !pnewton ) {
+    if ( !pStats ) {
         return;
     }
     
-    LpNewtonClear(*pnewton);
-    HDSDP_FREE(*pnewton);
+    HPrimalStatsClear(*pStats);
+    HDSDP_FREE(*pStats);
     
     return;
+}
+
+static hdsdp_lpsolver_params HLpSolverIGetDefaultParams(void) {
+    
+    hdsdp_lpsolver_params params;
+    
+    params.dAbsOptTol = 1e-06;
+    params.dAbsFeasTol = 1e-06;
+    params.dRelOptTol = 1e-10;
+    params.dRelFeasTol = 1e-10;
+    params.dKKTPrimalReg = 0.0;
+    params.dKKTDualReg = 0.0;
+    params.dPotentialRho = 2.0;
+    params.dPrimalUpdateStep = 0.95;
+    params.dDualUpdateStep = 0.95;
+    params.dIterativeTol = 1e-12;
+    params.dScalingThreshTol = 1e-05;
+    params.dScalingUpdateTol = 1e-03;
+    params.dBarrierLowerBnd = 1e-16;
+    
+    params.nThreads = 8;
+    params.nScalIter = 1;
+    params.nMaxIter = 1000;
+    
+    params.iScalMethod = SCAL_GEOMETRIC;
+    params.iPrimalMethod = 1;
+    
+    params.LpMethod = LP_ITER_MEHROTRA;
+    
+    return params;
+}
+
+static void HLpSolverIScaleData( hdsdp_lpsolver *HLp ) {
+    /* Perform ruiz and geometric scaling on the IPM data */
+    
+    return;
+}
+
+#define MEHROTRA_START (0)
+#define TRIVIAL_START  (1)
+static hdsdp_retcode HLpSolverIInitialize( hdsdp_lpsolver *HLp, int iStartMethod ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+exit_cleanup:
+    return retcode;
+}
+
+static void HLpSolverISetupResidual( hdsdp_lpsolver *HLp ) {
+    
+
+    return;
+}
+
+static int HLpSolverICollectStats( hdsdp_lpsolver *HLp ) {
+    
+    return 1;
+}
+
+static hdsdp_retcode HLpSolverITakePrimalDualStep( hdsdp_lpsolver *HLp ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+exit_cleanup:
+    return retcode;
+}
+
+static hdsdp_retcode HLpSolverITakeHSDStep( hdsdp_lpsolver *HLp ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+exit_cleanup:
+    return retcode;
+}
+
+static hdsdp_retcode HLpSolverITakePrimalStep( hdsdp_lpsolver *HLp ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+exit_cleanup:
+    return retcode;
+}
+
+extern hdsdp_retcode HLpSolverCreate( hdsdp_lpsolver **pHLp ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    if ( !pHLp ) {
+        retcode = HDSDP_RETCODE_FAILED;
+        goto exit_cleanup;
+    }
+    
+    hdsdp_lpsolver *HLp = NULL;
+    HDSDP_INIT(HLp, hdsdp_lpsolver, 1);
+    HDSDP_MEMCHECK(HLp);
+    HDSDP_ZERO(HLp, hdsdp_lpsolver, 1);
+    *pHLp = HLp;
+    
+exit_cleanup:
+    return retcode;
+}
+
+extern hdsdp_retcode HLpSolverInit( hdsdp_lpsolver *HLp, int nRow, int nCol ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    HLp->nRow = nRow;
+    HLp->nCol = nCol;
+    
+    HDSDP_INIT(HLp->dRowRhs, double, nRow);
+    HDSDP_INIT(HLp->dColObj, double, nCol);
+    HDSDP_INIT(HLp->dRowScal, double, nRow);
+    HDSDP_INIT(HLp->dColScal, double, nCol);
+    
+    HDSDP_MEMCHECK(HLp->dRowRhs);
+    HDSDP_MEMCHECK(HLp->dColObj);
+    HDSDP_MEMCHECK(HLp->dRowScal);
+    HDSDP_MEMCHECK(HLp->dColScal);
+    
+    HLp->params = HLpSolverIGetDefaultParams();
+    HDSDP_CALL(HPrimalStatsCreate(&HLp->stats));
+    HDSDP_CALL(HPrimalStatsInit(HLp->stats, nCol, &HLp->params));
+    
+    HLp->LpStatus = HDSDP_UNKNOWN;
+    
+    HDSDP_INIT(HLp->dColVal, double, nCol);
+    HDSDP_INIT(HLp->dColDual, double, nCol);
+    HDSDP_INIT(HLp->dRowDual, double, nRow);
+    
+    HDSDP_MEMCHECK(HLp->dColVal);
+    HDSDP_MEMCHECK(HLp->dColDual);
+    HDSDP_MEMCHECK(HLp->dRowDual);
+    
+    HDSDP_INIT(HLp->dPrimalInfeasVec, double, nRow);
+    HDSDP_INIT(HLp->dDualInfeasVec, double, nCol);
+    HDSDP_INIT(HLp->dComplVec, double, nCol);
+    HDSDP_INIT(HLp->dScalingMatrix, double, nCol);
+    
+    HDSDP_MEMCHECK(HLp->dPrimalInfeasVec);
+    HDSDP_MEMCHECK(HLp->dDualInfeasVec);
+    HDSDP_MEMCHECK(HLp->dComplVec);
+    HDSDP_MEMCHECK(HLp->dScalingMatrix);
+    
+    HDSDP_INIT(HLp->dColValDirection, double, nCol);
+    HDSDP_INIT(HLp->dColDualDirection, double, nCol);
+    HDSDP_INIT(HLp->dRowDualDirection, double, nRow);
+    
+    HDSDP_MEMCHECK(HLp->dColValDirection);
+    HDSDP_MEMCHECK(HLp->dColDualDirection);
+    HDSDP_MEMCHECK(HLp->dRowDualDirection);
+    
+    HDSDP_INIT(HLp->dAuxiColVector1, double, nCol);
+    HDSDP_INIT(HLp->dAuxiColVector2, double, nCol);
+    HDSDP_INIT(HLp->dAuxiColVector3, double, nCol);
+    
+    HDSDP_MEMCHECK(HLp->dAuxiColVector1);
+    HDSDP_MEMCHECK(HLp->dAuxiColVector2);
+    HDSDP_MEMCHECK(HLp->dAuxiColVector3);
+    
+    HDSDP_INIT(HLp->dAuxiRowVector1, double, nRow);
+    HDSDP_INIT(HLp->dAuxiRowVector2, double, nRow);
+    
+    HDSDP_MEMCHECK(HLp->dAuxiRowVector1);
+    HDSDP_MEMCHECK(HLp->dAuxiRowVector2);
+    
+    HDSDP_CALL(HLpKKTCreate(&HLp->Hkkt));
+    
+    HLp->dBarrierMu = HDSDP_INFINITY;
+    
+    HLp->pObjVal = HDSDP_INFINITY;
+    HLp->dObjVal = - HDSDP_INFINITY;
+    HLp->dPrimalDualGap = HDSDP_INFINITY;
+    
+    HLp->dKappa = 1.0;
+    HLp->dTau = 1.0;
+    HLp->dKappaDirection = 0.0;
+    HLp->dTauDirection = 0.0;
+    
+exit_cleanup:
+    return retcode;
+}
+
+extern hdsdp_retcode HLpSolverSetData( hdsdp_lpsolver *HLp, int *colMatBeg, int *colMatIdx, double *colMatElem,
+                                       int *colMatTransBeg, int *colMatTransIdx, double *colMatTransElem ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    HLp->nElem = colMatBeg[HLp->nCol];
+    
+    HDSDP_INIT(HLp->colMatBeg, int, HLp->nCol + 1);
+    HDSDP_INIT(HLp->colMatIdx, int, HLp->nElem);
+    HDSDP_INIT(HLp->colMatElem, double, HLp->nElem);
+    
+    HDSDP_MEMCHECK(HLp->colMatBeg);
+    HDSDP_MEMCHECK(HLp->colMatIdx);
+    HDSDP_MEMCHECK(HLp->colMatElem);
+    
+    HDSDP_INIT(HLp->colMatTransBeg, int, HLp->nRow + 1);
+    HDSDP_INIT(HLp->colMatTransIdx, int, HLp->nElem);
+    HDSDP_INIT(HLp->colMatTransElem, double, HLp->nElem);
+    
+    HDSDP_MEMCHECK(HLp->colMatTransBeg);
+    HDSDP_MEMCHECK(HLp->colMatTransIdx);
+    HDSDP_MEMCHECK(HLp->colMatTransElem);
+    
+    /* Copy problem data */
+    HDSDP_MEMCPY(HLp->colMatBeg, colMatBeg, int, HLp->nCol + 1);
+    HDSDP_MEMCPY(HLp->colMatIdx, colMatIdx, int, HLp->nElem);
+    HDSDP_MEMCPY(HLp->colMatElem, colMatElem, double, HLp->nElem);
+    
+    HDSDP_MEMCPY(HLp->colMatTransBeg, colMatTransBeg, int, HLp->nRow + 1);
+    HDSDP_MEMCPY(HLp->colMatTransIdx, colMatTransIdx, int, HLp->nElem);
+    HDSDP_MEMCPY(HLp->colMatTransElem, colMatTransElem, double, HLp->nElem);
+    
+    /* Initialize KKT solver */
+    HDSDP_CALL(HLpKKTCreate(&HLp->Hkkt));
+    HDSDP_CALL(HLpKKTInit(HLp->Hkkt, HLp->nRow, HLp->nCol,
+                          HLp->colMatBeg, HLp->colMatIdx, HLp->colMatElem,
+                          HLp->colMatTransBeg, HLp->colMatTransIdx, HLp->colMatTransElem));
+    
+exit_cleanup:
+    return retcode;
+}
+
+extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp ) {
+    /* Invoke hybrid primal-dual and primal solver */
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    int nMaxIter = HLp->params.nMaxIter;
+    int goOn = 0;
+    
+    for ( int nIter = 0; nIter < nMaxIter; ++nIter ) {
+        
+        if ( HLp->params.LpMethod == LP_ITER_PRIMAL ) {
+            HDSDP_CALL(HLpSolverITakePrimalStep(HLp));
+        } else if ( HLp->params.LpMethod == LP_ITER_HSD ) {
+            HDSDP_CALL(HLpSolverITakeHSDStep(HLp));
+        } else {
+            HDSDP_CALL(HLpSolverITakePrimalDualStep(HLp));
+        }
+        
+        goOn = HLpSolverICollectStats(HLp);
+        
+        if ( !goOn ) {
+            break;
+        }
+    }
+    
+exit_cleanup:
+    return retcode;
+}
+
+extern void HLpSolverClear( hdsdp_lpsolver *HLp ) {
+    
+    if ( !HLp ) {
+        return;
+    }
+    
+    HDSDP_FREE(HLp->colMatBeg);
+    HDSDP_FREE(HLp->colMatIdx);
+    HDSDP_FREE(HLp->colMatElem);
+    
+    HDSDP_FREE(HLp->colMatTransBeg);
+    HDSDP_FREE(HLp->colMatTransIdx);
+    HDSDP_FREE(HLp->colMatTransElem);
+    
+    HDSDP_FREE(HLp->dRowRhs);
+    HDSDP_FREE(HLp->dColObj);
+    HDSDP_FREE(HLp->dRowScal);
+    HDSDP_FREE(HLp->dColScal);
+    
+    HPrimalStatsDestroy(&HLp->stats);
+    
+    HDSDP_FREE(HLp->dColVal);
+    HDSDP_FREE(HLp->dColDual);
+    HDSDP_FREE(HLp->dRowDual);
+    
+    HDSDP_FREE(HLp->dPrimalInfeasVec);
+    HDSDP_FREE(HLp->dDualInfeasVec);
+    HDSDP_FREE(HLp->dComplVec);
+    HDSDP_FREE(HLp->dScalingMatrix);
+    
+    HDSDP_FREE(HLp->dColValDirection);
+    HDSDP_FREE(HLp->dColDualDirection);
+    HDSDP_FREE(HLp->dRowDualDirection);
+    
+    HDSDP_FREE(HLp->dAuxiColVector1);
+    HDSDP_FREE(HLp->dAuxiColVector2);
+    HDSDP_FREE(HLp->dAuxiColVector3);
+    
+    HDSDP_FREE(HLp->dAuxiRowVector1);
+    HDSDP_FREE(HLp->dAuxiRowVector2);
+    
+    HLpKKTDestroy(&HLp->Hkkt);
+    
+    HDSDP_ZERO(HLp, hdsdp_lpsolver, 1);
+    
+    return;
+}
+
+extern void HLpSolverDestroy( hdsdp_lpsolver **pHLp ) {
+    
+    if ( !pHLp ) {
+        return;
+    }
+    
+    HLpSolverClear(*pHLp);
+    HDSDP_FREE(*pHLp);
 }

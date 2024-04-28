@@ -7,17 +7,19 @@
 #include "def_hdsdp_lpsolve.h"
 #endif
 
-extern hdsdp_retcode LpNewtonCreate( hdsdp_lpsolver **pnewton, int nThreads );
-extern hdsdp_retcode LpNewtonInit( hdsdp_lpsolver *newton, int nCol, int nRow, int *colMatBeg, int *colMatIdx, double *colMatElem );
-extern hdsdp_retcode LpNewtonOneStep( hdsdp_lpsolver *newton, double *lpObj, double *lpRHS, int *colMatBeg, int *colMatIdx, double *colMatElem,
-                                double *colVal, double *rowDual, double *colDual, double *kappa, double *tau,
-                                double *pRes, double *dRes, double pObjVal, double dObjVal, double spxSize );
-extern hdsdp_retcode LpNewtonInitRobust( hdsdp_lpsolver *newton, int nCol, int nRow, int *colMatBeg, int *colMatIdx, double *colMatElem );
-extern hdsdp_retcode LpNewtonOneStepRobust( hdsdp_lpsolver *newton, double *lpObj, double *lpRHS, int *colMatBeg, int *colMatIdx, double *colMatElem,
-                                double *colVal, double *rowDual, double *colDual, double *kappa, double *tau,
-                                double *pRes, double *dRes, double pObjVal, double dObjVal, double spxSize );
-extern void LpNewtonClear( hdsdp_lpsolver *newton );
-extern void LpNewtonDestroy( hdsdp_lpsolver **pnewton );
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+extern hdsdp_retcode HLpSolverCreate( hdsdp_lpsolver **pHLp );
+extern hdsdp_retcode HLpSolverInit( hdsdp_lpsolver *HLp, int nRow, int nCol );
+extern hdsdp_retcode HLpSolverSetData( hdsdp_lpsolver *HLp, int *colMatBeg, int *colMatIdx, double *colMatElem,
+                                      int *colMatTransBeg, int *colMatTransIdx, double *colMatTransElem );
+extern void HLpSolverClear( hdsdp_lpsolver *HLp );
+extern void HLpSolverDestroy( hdsdp_lpsolver **pHLp );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* lp_newton_h */

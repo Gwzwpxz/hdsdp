@@ -115,7 +115,7 @@ extern void csp_trimultiply( int n, int *Sp, int *Si, double *Sx, double *X, dou
     /* Routine for multiplying X * S * X (S is csc sparse) and adding it to buffer
        Check dataMatSparseKKT3ComputeSinvASinvImpl for more details */
     
-    int i, j;
+    int i, j, k;
     double aVal = 0.0;
     double *Sinv = X;
     double *SinvACol = NULL;
@@ -126,9 +126,9 @@ extern void csp_trimultiply( int n, int *Sp, int *Si, double *Sx, double *X, dou
     
     HDSDP_ZERO(SinvA, double, n * n);
     
-    for ( int i = 0; i < n; ++i ) {
-        for ( int k = Sp[i]; k < Sp[i + 1]; ++k ) {
-            int j = Si[k];
+    for ( i = 0; i < n; ++i ) {
+        for ( k = Sp[i]; k < Sp[i + 1]; ++k ) {
+            j = Si[k];
             aVal = Sx[k];
             SinvACol = SinvA + n * i;
             SinvRow = Sinv + n * j;
@@ -260,11 +260,11 @@ extern int tsp_r1_extract( int n, int nnz, int *Ai, int *Aj, double *Ax, double 
     
     if ( s == 1.0 ) {
         /* If condition is broken into two cases */
-        for ( int k = 0; k < nnz; ++k ) {
+        for ( k = 0; k < nnz; ++k ) {
             eps += fabs(Ax[k] - a[Ai[k]] * a[Aj[k]]);
         }
     } else {
-        for ( int k = 0; k < nnz; ++k ) {
+        for ( k = 0; k < nnz; ++k ) {
             eps += fabs(Ax[k] + a[Ai[k]] * a[Aj[k]]);
         }
     }
