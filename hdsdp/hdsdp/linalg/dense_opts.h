@@ -1,6 +1,12 @@
 #ifndef dense_opts_h
 #define dense_opts_h
 
+#ifdef HEADERPATH
+#include "interface/hdsdp.h"
+#else
+#include "hdsdp.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

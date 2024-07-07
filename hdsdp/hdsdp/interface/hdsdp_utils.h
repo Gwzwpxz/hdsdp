@@ -86,6 +86,8 @@ printf("Function Profiler: Line %d of %s by %d runs. "       \
 extern "C" {
 #endif
 
+extern hdsdp_retcode HUtilGetSparseMatrix( char *path, int *pnRow, int *pnCol, int **pcolMatBeg,
+                                            int **pColMatIdx, double **pColMatElem, double **pRhs );
 extern double HUtilGetTimeStamp( void );
 extern void HUtilMatSymmetrize( int n, double *v );
 extern void HUtilMatTranspose( int n, double *A );

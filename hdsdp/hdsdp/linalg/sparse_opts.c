@@ -18,7 +18,7 @@
 #include <math.h>
 
 /* Compressed column operations */
-extern void csp_Axpby( int n, int *Ap, int *Ai, double *Ax, double a, double *x, double *y ) {
+extern void csp_Axpy( int n, int *Ap, int *Ai, double *Ax, double a, double *x, double *y ) {
     
     if ( a == 0.0 ) {
         return;
@@ -33,7 +33,7 @@ extern void csp_Axpby( int n, int *Ap, int *Ai, double *Ax, double a, double *x,
     return;
 }
 
-extern void csp_ATxpby( int n, int *Ap, int *Ai, double *Ax, double a, double *x, double *y ) {
+extern void csp_ATxpy( int n, int *Ap, int *Ai, double *Ax, double a, double *x, double *y ) {
     
     if ( a == 0.0 ) {
         return;
@@ -174,6 +174,243 @@ extern double csp_dot_fds( int n, int *Ap, int *Ai, double *Ax, double *B ) {
     }
     
     return 2.0 * dAdotB;
+}
+
+extern void csp_max_rowabs( int n, int *Ap, int *Ai, double *Ax, double *row ) {
+    
+    double x = 0.0;
+    for ( int i = 0, j; i < n; ++i ) {
+        for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
+            x = fabs(Ax[j]);
+            row[Ai[j]] = ( x > row[Ai[j]] ) ? x : row[Ai[j]];
+        }
+    }
+    
+    return;
+}
+
+extern void csp_min_rownzabs( int m, int n, int *Ap, int *Ai, double *Ax, double *row ) {
+    
+    for ( int i = 0; i < m; ++i ) {
+        row[i] = HDSDP_INFINITY;
+    }
+    
+    double x = 0.0;
+    for ( int i = 0, j; i < n; ++i ) {
+        for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
+            x = fabs(Ax[j]);
+            row[Ai[j]] = ( x < row[Ai[j]] && x > 0 ) ? x : row[Ai[j]];
+        }
+    }
+    
+    return;
+}
+
+extern void csp_max_colabs( int n, int *Ap, int *Ai, double *Ax, double *col ) {
+    
+    double cmax = 0.0, x = 0.0;
+    for ( int i = 0, j; i < n; ++i ) {
+        cmax = 0.0;
+        for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
+            x = fabs(Ax[j]);
+            cmax = ( x > cmax ) ? x : cmax;
+        }
+        col[i] = ( cmax > col[i] ) ? cmax : col[i];
+    }
+    
+    return;
+}
+
+extern void csp_min_colnzabs( int n, int *Ap, int *Ai, double *Ax, double *col ) {
+    
+    double cmin = 0.0, x = 0.0;
+    
+    for ( int i = 0; i < n; ++i ) {
+        col[i] = HDSDP_INFINITY;
+    }
+    
+    for ( int i = 0, j; i < n; ++i ) {
+        cmin = HDSDP_INFINITY;
+        for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
+            x = fabs(Ax[j]);
+            cmin = ( x < cmin && x > 0 ) ? x : cmin;
+        }
+        col[i] = ( cmin < col[i] ) ? cmin : col[i];
+    }
+    
+    return;
+}
+
+extern void csp_rowscal( int n, int *Ap, int *Ai, double *Ax, double *row ) {
+    
+    for ( int i = 0, j; i < n; ++i ) {
+        for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
+            Ax[j] = Ax[j] / row[Ai[j]];
+        }
+    }
+    
+    return;
+}
+
+extern void csp_colscal( int n, int *Ap, int *Ai, double *Ax, double *col ) {
+    
+    for ( int i = 0, j; i < n; ++i ) {
+        for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
+            Ax[j] = Ax[j] / col[i];
+        }
+    }
+
+    return;
+}
+
+extern hdsdp_retcode csp_geoscal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, double *E ) {
+    
+    /* Scale rows */
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    double *dGeoScalRow;
+    double *dGeoScalCol;
+    
+    HDSDP_INIT(dGeoScalRow, double, m);
+    HDSDP_INIT(dGeoScalCol, double, n);
+    
+    HDSDP_MEMCHECK(dGeoScalRow);
+    HDSDP_MEMCHECK(dGeoScalCol);
+    
+    /* Scale row */
+    csp_max_rowabs(n, Ap, Ai, Ax, dGeoScalRow);
+    csp_min_rownzabs(m, n, Ap, Ai, Ax, D);
+    
+    for ( int i = 0; i < m; ++i ) {
+        D[i] = sqrt(D[i] * dGeoScalRow[i]);
+    }
+    
+    csp_rowscal(n, Ap, Ai, Ax, D);
+    
+    /* Scale column */
+    csp_max_colabs(n, Ap, Ai, Ax, dGeoScalCol);
+    csp_min_colnzabs(n, Ap, Ai, Ax, E);
+    
+    for ( int i = 0; i < n; ++i ) {
+        E[i] = sqrt(E[i] * dGeoScalCol[i]);
+    }
+    
+    csp_colscal(n, Ap, Ai, Ax, E);
+    
+exit_cleanup:
+    
+    HDSDP_FREE(dGeoScalRow);
+    HDSDP_FREE(dGeoScalCol);
+    
+    return retcode;
+}
+
+extern hdsdp_retcode csp_ruizscal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, double *E, int maxIter ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    int nRow = m;
+    int nCol = n;
+    
+    double *dRuizScalDiagRow = D;
+    double *dRuizScalDiagCol = E;
+    double *dRuizWorkDiagRow = NULL;
+    double *dRuizWorkDiagCol = NULL;
+    
+    /* Allocate workspace */
+    HDSDP_INIT(dRuizWorkDiagRow, double, nRow);
+    HDSDP_INIT(dRuizWorkDiagCol, double, nCol);
+    
+    if ( !dRuizWorkDiagRow || !dRuizWorkDiagCol ) {
+        retcode = HDSDP_RETCODE_FAILED;
+        goto exit_cleanup;
+    }
+    
+    for ( int i = 0; i < maxIter; ++i ) {
+        
+        HDSDP_ZERO(dRuizWorkDiagRow, double, nRow);
+        csp_max_rowabs(nCol, Ap, Ai, Ax, dRuizWorkDiagRow);
+        HDSDP_ZERO(dRuizWorkDiagCol, double, nCol);
+        csp_max_colabs(nCol, Ap, Ai, Ax, dRuizWorkDiagCol);
+        
+        /* sqrt operation */
+        double maxRuizDiagDeviate = 0.0;
+        double ruizDiagDeviate = 0.0;
+        
+        for ( int j = 0; j < nRow; ++j ) {
+            dRuizWorkDiagRow[j] = sqrtl(dRuizWorkDiagRow[j]);
+            dRuizScalDiagRow[j] = dRuizScalDiagRow[j] * dRuizWorkDiagRow[j];
+            ruizDiagDeviate = fabs(dRuizWorkDiagRow[j] - 1.0);
+            maxRuizDiagDeviate = HDSDP_MAX(maxRuizDiagDeviate, ruizDiagDeviate);
+        }
+        
+        for ( int j = 0; j < nCol; ++j ) {
+            dRuizWorkDiagCol[j] = sqrtl(dRuizWorkDiagCol[j]);
+            dRuizScalDiagCol[j] = dRuizScalDiagCol[j] * dRuizWorkDiagCol[j];
+            ruizDiagDeviate = fabs(dRuizWorkDiagCol[j] - 1.0);
+            maxRuizDiagDeviate = HDSDP_MAX(maxRuizDiagDeviate, ruizDiagDeviate);
+        }
+        
+        if ( maxRuizDiagDeviate < 1e-08 ) {
+            break;
+        }
+        
+        /* Scaling */
+        csp_rowscal(nCol, Ap, Ai, Ax, dRuizWorkDiagRow);
+        csp_colscal(nCol, Ap, Ai, Ax, dRuizWorkDiagCol);
+    }
+        
+    for ( int i = 0; i < nRow; ++i ) {
+        dRuizScalDiagRow[i] = 1.0 / dRuizScalDiagRow[i];
+    }
+    
+    for ( int i = 0; i < nCol; ++i ) {
+        dRuizScalDiagCol[i] = 1.0 / dRuizScalDiagCol[i];
+    }
+        
+exit_cleanup:
+    HDSDP_FREE(dRuizWorkDiagRow);
+    HDSDP_FREE(dRuizWorkDiagCol);
+    return retcode;
+}
+
+extern void csp_l2scal( int m, int n, int *Ap, int *Ai, double *Ax, double *D, double *E ) {
+        
+    int nRow = m;
+    int nCol = n;
+    
+    double *dL2WorkDiagRow = D;
+    double *dL2WorkDiagCol = E;
+    
+    for ( int i = 0, j; i < nCol; ++i ) {
+        for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
+            dL2WorkDiagRow[Ai[j]] += Ax[j] * Ax[j];
+        }
+    }
+    
+    for ( int i = 0; i < nRow; ++i ) {
+        dL2WorkDiagRow[i] = sqrt(dL2WorkDiagRow[i]);
+        if ( dL2WorkDiagRow[i] == 0.0 ) {
+            dL2WorkDiagRow[i] = 1.0;
+        }
+    }
+    
+    csp_rowscal(nCol, Ap, Ai, Ax, dL2WorkDiagRow);
+    
+    for ( int i = 0, j; i < nCol; ++i ) {
+        for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
+            dL2WorkDiagCol[i] += Ax[j] * Ax[j];
+        }
+    }
+    
+    for ( int i = 0; i < nCol; ++i ) {
+        dL2WorkDiagCol[i] = sqrt(dL2WorkDiagCol[i]);
+        if ( dL2WorkDiagCol[i] == 0.0 ) {
+            dL2WorkDiagCol[i] = 1.0;
+        }
+    }
+    
+    csp_colscal(nCol, Ap, Ai, Ax, dL2WorkDiagCol);;
+    return;
 }
 
 extern void csp_dump( int n, int *Ap, int *Ai, double *Ax, double *v ) {

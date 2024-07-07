@@ -108,6 +108,8 @@ static hdsdp_retcode pardisoLinSolverCreateIndefinite( void **pchol, int nCol ) 
     set_pardiso_param(pds->iparm, PARDISO_PARAM_INDEX, PARDISO_PARAM_INDEX_C);
     set_pardiso_param(pds->iparm, PARDISO_PARAM_DIAGONAL, PARDISO_PARAM_DIAGONAL_ON);
     
+    *pchol = pds;
+    
 exit_cleanup:
     return retcode;
 }
@@ -1365,6 +1367,20 @@ extern hdsdp_retcode HFpLinsysCreate( hdsdp_linsys_fp **pHLin, int nCol, linsys_
             HLinsys->cholGetDiag = conjGradLinSolverGetDiag;
             HLinsys->cholInvert = conjGradLinSolverInvert;
             HLinsys->cholDestroy = conjGradLinSolverDestroy;
+            break;
+        case HDSDP_LINSYS_SPARSE_ITERATIVE:
+            /* Replace by true iterative methods */
+            HLinsys->cholCreate = pardisoLinSolverCreate;
+            HLinsys->cholSetParam = pardisoLinSolverSetThreads;
+            HLinsys->cholSymbolic = pardisoLinSolverSymbolic;
+            HLinsys->cholNumeric = pardisoLinSolverNumeric;
+            HLinsys->cholPsdCheck = pardisoLinSolverPsdCheck;
+            HLinsys->cholFSolve = pardisoLinSolverForwardN;
+            HLinsys->cholBSolve = pardisoLinSolverBackwardN;
+            HLinsys->cholSolve = pardisoLinSolverSolveN;
+            HLinsys->cholGetDiag = pardisoLinSolverGetDiag;
+            HLinsys->cholInvert = pardisoLinSolverInvert;
+            HLinsys->cholDestroy = pardisoLinSolverDestroy;
             break;
         /* Not implemented */
         case HDSDP_LINSYS_SMALL_DIRECT:

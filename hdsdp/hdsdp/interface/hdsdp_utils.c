@@ -117,6 +117,224 @@ static int dpartitiond( double *ind, double *val, int l, int h ) {
     return l;
 }
 
+#define LINEBUFFER  (1024)
+static hdsdp_retcode HUtilIGetIntVecData( char *fname, int nElem, int *iData ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    char thisLine[128] = "";
+    FILE *file = NULL;
+    
+    file = fopen(fname, "r");
+    
+    if (!file) {
+        printf("Failed to read %s \n", fname);
+        retcode = HDSDP_RETCODE_FAILED;
+        goto exit_cleanup;
+    }
+    
+    int iLine = 0;
+    int nGet = 0;
+    
+    for ( iLine = 0; !feof(file); ) {
+        
+        fgets(thisLine, LINEBUFFER, file);
+        
+        if ( iLine >= nElem ) {
+            break;
+        }
+        
+        nGet = sscanf(thisLine, "%d", &iData[iLine]);
+        
+        if ( nGet != 1 ) {
+            printf("Error at line %d of %s \n", iLine + 1, fname);
+            retcode = HDSDP_RETCODE_FAILED;
+            goto exit_cleanup;
+        }
+    
+        iLine += 1;
+    }
+    
+exit_cleanup:
+    return retcode;
+}
+
+static hdsdp_retcode HUtilIGetDblVecData( char *fname, int nElem, double *dData ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    char thisLine[128] = "";
+    FILE *file = NULL;
+    
+    file = fopen(fname, "r");
+    
+    if (!file) {
+        printf("Failed to read %s \n", fname);
+        retcode = HDSDP_RETCODE_FAILED;
+        goto exit_cleanup;
+    }
+    
+    int iLine = 0;
+    int nGet = 0;
+    
+    for ( iLine = 0; !feof(file); ) {
+        
+        fgets(thisLine, LINEBUFFER, file);
+        
+        if ( iLine >= nElem ) {
+            break;
+        }
+        
+        nGet = sscanf(thisLine, "%lg", &dData[iLine]);
+        
+        if ( nGet != 1 ) {
+            printf("Error at line %d of %s \n", iLine + 1, fname);
+            retcode = HDSDP_RETCODE_FAILED;
+            goto exit_cleanup;
+        }
+    
+        iLine += 1;
+    }
+    
+exit_cleanup:
+    return retcode;
+}
+
+static hdsdp_retcode HUtilIGetSparseMatData( int nRow, int nCol, char *path, char *pFile, char *iFile, char *xFile,
+                             int **pAp, int **pAi, double **pAx ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    char filename[100] = "";
+    
+    int *Ap = NULL;
+    int *Ai = NULL;
+    double *Ax = NULL;
+    
+    HDSDP_INIT(Ap, int, nCol + 1);
+    
+    if ( !Ap ) {
+        retcode = HDSDP_RETCODE_FAILED;
+        goto exit_cleanup;
+    }
+    
+    strcpy(filename, path);
+    strcat(filename, pFile);
+    HDSDP_CALL(HUtilIGetIntVecData(filename, nCol + 1, Ap));
+    
+    int nNz = Ap[nCol];
+    HDSDP_INIT(Ai, int, nNz);
+    HDSDP_INIT(Ax, double, nNz);
+    
+    if ( !Ai || !Ax ) {
+        retcode = HDSDP_RETCODE_FAILED;
+        goto exit_cleanup;
+    }
+    
+    strcpy(filename, path);
+    strcat(filename, iFile);
+    HDSDP_CALL(HUtilIGetIntVecData(filename, nNz, Ai));
+    
+    strcpy(filename, path);
+    strcat(filename, xFile);
+    HDSDP_CALL(HUtilIGetDblVecData(filename, nNz, Ax));
+    
+    *pAp = Ap;
+    *pAi = Ai;
+    *pAx = Ax;
+    
+exit_cleanup:
+    
+    if ( retcode != HDSDP_RETCODE_OK ) {
+        HDSDP_FREE(Ap);
+        HDSDP_FREE(Ai);
+        HDSDP_FREE(Ax);
+    }
+    
+    return retcode;
+}
+
+#define DIMENSION   ("dim.txt")
+#define ABEG        ("Ap.txt")
+#define AIDX        ("Ai.txt")
+#define AELEM       ("Ax.txt")
+#define ARHS        ("b.txt")
+extern hdsdp_retcode HUtilGetSparseMatrix( char *path, int *pnRow, int *pnCol, int **pcolMatBeg,
+                                           int **pColMatIdx, double **pColMatElem, double **pRhs ) {
+    /* Read sparse matrix data from csv files*/
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    FILE *file = NULL;
+    char filename[100] = "";
+    char line[128] = "";
+    
+    int nRow = 0;
+    int nCol = 0;
+    
+    int *Ap = NULL;
+    int *Ai = NULL;
+    double *Ax = NULL;
+    double *dRhs = NULL;
+    
+    strcpy(filename, path);
+    strcat(filename, DIMENSION);
+    
+    file = fopen(filename, "r");
+    
+    if ( !file ) {
+        printf("Failed to read %s \n", filename);
+        retcode = HDSDP_RETCODE_FAILED;
+        goto exit_cleanup;
+    }
+    
+    fgets(line, LINEBUFFER, file);
+    sscanf(line, "%d, %d", &nRow, &nCol);
+    
+    HDSDP_INIT(Ap, int, nCol + 1);
+    HDSDP_INIT(dRhs, double, nCol);
+    
+    HDSDP_MEMCHECK(Ap);
+    HDSDP_MEMCHECK(dRhs);
+    
+    strcpy(filename, path);
+    strcat(filename, ABEG);
+    HDSDP_CALL(HUtilIGetIntVecData(filename, nCol + 1, Ap));
+    
+    int nNz = Ap[nCol];
+    HDSDP_INIT(Ai, int, nNz);
+    HDSDP_INIT(Ax, double, nNz);
+    HDSDP_MEMCHECK(Ai);
+    HDSDP_MEMCHECK(Ax);
+    
+    strcpy(filename, path);
+    strcat(filename, AIDX);
+    HDSDP_CALL(HUtilIGetIntVecData(filename, nNz, Ai));
+    
+    strcpy(filename, path);
+    strcat(filename, AELEM);
+    HDSDP_CALL(HUtilIGetDblVecData(filename, nNz, Ax));
+    
+    strcpy(filename, path);
+    strcat(filename, ARHS);
+    HDSDP_CALL(HUtilIGetDblVecData(filename, nCol, dRhs));
+    
+    *pnRow = nRow;
+    *pnCol = nCol;
+    
+    *pcolMatBeg = Ap;
+    *pColMatIdx = Ai;
+    *pColMatElem = Ax;
+    *pRhs = dRhs;
+    
+exit_cleanup:
+    
+    if ( retcode != HDSDP_RETCODE_OK ) {
+        HDSDP_FREE(Ap);
+        HDSDP_FREE(Ai);
+        HDSDP_FREE(Ax);
+        HDSDP_FREE(dRhs);
+    }
+    
+    return retcode;
+}
+
 extern double HUtilGetTimeStamp( void ) {
     
     return my_clock();
@@ -293,7 +511,7 @@ extern void HUtilWriteDblArray( char *outFileName, int nLen, double *dblContent 
 hdsdp_retcode HUtilKKTCheck( void *Hkkt ) {
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
-    
+
     hdsdp_kkt *kkt = (hdsdp_kkt *) Hkkt;
     int isValid = 1;
     

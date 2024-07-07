@@ -33,6 +33,7 @@ extern void syr( char *uplo, int *n, double *alpha, double *x, int *incx, double
 extern void symv( char *uplo, int *n, double *alpha, double *a, int *lda, double *x,
                   int *incx, double *beta, double *y, const int *incy );
 extern int idamax( int *n, double *x, int *incx );
+extern int idmin( int *n, double *x, int *incx );
 extern double sumlogdet( int *n, double *x );
 extern void vvscl( int *n, double *s, double *x );
 extern void vvrscl( int *n, double *s, double *x );

@@ -139,6 +139,22 @@ extern int idamax( int *n, double *x, int *incx ) {
     return idmax;
 }
 
+extern int idmin( int *n, double *x, int *incx ) {
+    
+    int imin = 0;
+    double dmin = HDSDP_INFINITY;
+    
+    for ( int i = 0; i < *n; ++i ) {
+        double dx = x[i];
+        if ( dx < dmin ) {
+            dmin = dx; imin = i;
+        }
+    }
+    
+    return imin;
+}
+
+
 extern double sumlogdet( int *n, double *x ) {
     
     double logdet = 0.0;

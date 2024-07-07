@@ -14,7 +14,8 @@ extern "C" {
 extern hdsdp_retcode HLpSolverCreate( hdsdp_lpsolver **pHLp );
 extern hdsdp_retcode HLpSolverInit( hdsdp_lpsolver *HLp, int nRow, int nCol );
 extern hdsdp_retcode HLpSolverSetData( hdsdp_lpsolver *HLp, int *colMatBeg, int *colMatIdx, double *colMatElem,
-                                      int *colMatTransBeg, int *colMatTransIdx, double *colMatTransElem );
+                                      int *colMatTransBeg, int *colMatTransIdx, double *colMatTransElem, double *rowRHS, double *colObj );
+extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp );
 extern void HLpSolverClear( hdsdp_lpsolver *HLp );
 extern void HLpSolverDestroy( hdsdp_lpsolver **pHLp );
 

@@ -12,21 +12,16 @@
 #endif
 
 
-typedef enum {
+#define LP_ITER_MEHROTRA (0)
+#define LP_ITER_PRIMAL   (1)
+#define LP_ITER_HSD      (2)
     
-    LP_ITER_MEHROTRA,
-    LP_ITER_PRIMAL,
-    LP_ITER_HSD
-    
-} lp_method;
+#define SCAL_RUIZ      (0)
+#define SCAL_GEOMETRIC (1)
+#define SCAL_L2NORM    (2)
 
-typedef enum {
-    
-    SCAL_RUIZ,
-    SCAL_GEOMETRIC,
-    SCAL_L2NORM
-    
-} scal_method;
+#define MEHROTRA_START (0)
+#define TRIVIAL_START  (1)
 
 typedef struct {
     
@@ -43,22 +38,6 @@ typedef struct {
     /* Potential parameter */
     double dPotentialRho;
     
-    /* Threads for linear system */
-    int nThreads;
-    
-    /* Maximum iteration */
-    int nMaxIter;
-    
-    /* Scaling */
-    scal_method iScalMethod;
-    int nScalIter;
-    
-    /* Whether primal method is on */
-    int iPrimalMethod;
-    
-    /* LP method */
-    lp_method LpMethod;
-    
     /* Primal and dual update */
     double dPrimalUpdateStep;
     double dDualUpdateStep;
@@ -67,10 +46,27 @@ typedef struct {
     double dIterativeTol;
     /* Threshold of scaling matrix check */
     double dScalingThreshTol;
-    /* Threshold of scaling matrix check */
-    double dScalingUpdateTol;
     /* Lower bound of barrier parameter*/
     double dBarrierLowerBnd;
+    
+    /* Starting point */
+    int iStartMethod;
+    
+    /* Threads for linear system */
+    int nThreads;
+    
+    /* Maximum iteration */
+    int nMaxIter;
+    
+    /* Scaling */
+    int iScalMethod;
+    int nScalIter;
+    
+    /* Whether primal method is on */
+    int iPrimalMethod;
+    
+    /* LP method */
+    int LpMethod;
     
 } hdsdp_lpsolver_params;
 
@@ -84,6 +80,7 @@ typedef struct {
     double dCondNumberEst;
     double dIterDiffMetric;
     double dIterDiffMetricScal;
+    double dIterDiffMetricThresh;
     
 } hdsdp_primal_stats;
 

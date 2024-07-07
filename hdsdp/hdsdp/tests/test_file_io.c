@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #ifdef HEADERPATH
 #include "interface/hdsdp.h"
 #include "interface/hdsdp_utils.h"
@@ -7,6 +5,10 @@
 #include "interface/hdsdp_file_io.h"
 #include "interface/hdsdp_conic.h"
 #include "interface/hdsdp_schur.h"
+#include "interface/hdsdp_lpsolve.h"
+#include "linalg/sparse_opts.h"
+#include "external/lp_mps.h"
+#include "external/hdsdp_cs.h"
 #else
 #include "hdsdp.h"
 #include "hdsdp_utils.h"
@@ -14,15 +16,136 @@
 #include "hdsdp_file_io.h"
 #include "hdsdp_conic.h"
 #include "hdsdp_schur.h"
+#include "sparse_opts.h"
+#include "lp_mps.h"
+#include "hdsdp_cs.h"
+#include "hdsdp_lpsolve.h"
 #endif
 
+#include <stdio.h>
+#include <string.h>
 #include <math.h>
 
 int test_file_io( char *fname );
 int test_solver( char *fname );
+int test_mat( char *path );
 
-int test_file_io( char *fname ) {
+#define FILE_TYPE_UNKOWN (0)
+#define FILE_TYPE_MPS    (1)
+#define FILE_TYPE_SDPA   (2)
+
+static int get_file_type( char *fname ) {
     
+    
+    char *mpssuf = ".mps";
+    char *sdpasuf = ".dat-s";
+    
+    char *ext = strrchr(fname, '.');
+    if ( ext ) {
+        if ( strcmp(mpssuf, ext) == 0 ) {
+            return FILE_TYPE_MPS;
+        } else if ( strcmp(sdpasuf, ext) == 0 ) {
+            return FILE_TYPE_SDPA;
+        }
+    }
+    
+    return FILE_TYPE_UNKOWN;
+}
+
+static int file_io_mps( char *fname ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    char prob[128] = "?";
+    int *Aeqp = NULL;
+    int *Aeqi = NULL;
+    double *Aeqx = NULL;
+    
+    int *AeqTransp = NULL;
+    int *AeqTransi = NULL;
+    double *AeqTransx = NULL;
+
+    int *Aineqp = NULL;
+    int *Aineqi = NULL;
+    double *Aineqx = NULL;
+    
+    int *colUbIdx = NULL;
+    double *colUbElem = NULL;
+    
+    int nCol;
+    int nRow;
+    int nEqRow;
+    int nIneqRow;
+    int nColUb;
+    
+    int nElem = 0;
+    double *rowRhs = NULL;
+    double *colObj = NULL;
+    
+    int *iTransBuffer = NULL;
+    
+    /* Reading the standard mps file */
+    retcode = (hdsdp_retcode) potLpMpsRead(fname, prob, &nRow, &nEqRow, &nIneqRow, &nCol, &nElem,
+                                           &Aeqp, &Aeqi, &Aeqx, &Aineqp, &Aineqi, &Aineqx, &rowRhs,
+                                           &colObj, &nColUb, &colUbIdx, &colUbElem);
+    
+    assert( nIneqRow == 0 && nColUb == 0 );
+    
+    HDSDP_INIT(AeqTransp, int, nRow + 1);
+    HDSDP_INIT(AeqTransi, int, Aeqp[nCol]);
+    HDSDP_INIT(AeqTransx, double, Aeqp[nCol]);
+    HDSDP_INIT(iTransBuffer, int, nRow);
+    /* Compute transpose of Aeq */
+    for ( int iElem = 0; iElem < Aeqp[nCol]; ++iElem ) {
+        iTransBuffer[Aeqi[iElem]] += 1;
+    }
+    
+    dcs_cumsum(AeqTransp, iTransBuffer, nRow);
+    
+    int iPos = 0;
+    
+    for ( int iCol = 0; iCol < nCol; ++iCol ) {
+        for ( int iElem = Aeqp[iCol]; iElem < Aeqp[iCol + 1]; ++iElem ) {
+            AeqTransi[iPos = iTransBuffer[Aeqi[iElem]]++] = iCol;
+            AeqTransx[iPos] = Aeqx[iElem];
+        }
+    }
+    
+    /* Call solver */
+    hdsdp_lpsolver *lpsolve = NULL;
+    HDSDP_CALL(HLpSolverCreate(&lpsolve));
+    HDSDP_CALL(HLpSolverInit(lpsolve, nRow, nCol));
+    HDSDP_CALL(HLpSolverSetData(lpsolve, Aeqp, Aeqi, Aeqx, AeqTransp, AeqTransi, AeqTransx, rowRhs, colObj));
+    
+    HDSDP_CALL(HLpSolverOptimize(lpsolve));
+    
+    HLpSolverDestroy(&lpsolve);
+    
+exit_cleanup:
+    
+    HDSDP_FREE(Aineqp);
+    HDSDP_FREE(Aineqi);
+    HDSDP_FREE(Aineqx);
+    
+    HDSDP_FREE(Aeqp);
+    HDSDP_FREE(Aeqi);
+    HDSDP_FREE(Aeqx);
+    
+    HDSDP_FREE(AeqTransp);
+    HDSDP_FREE(AeqTransi);
+    HDSDP_FREE(AeqTransx);
+    HDSDP_FREE(iTransBuffer);
+    
+    HDSDP_FREE(colUbIdx);
+    HDSDP_FREE(colUbElem);
+    
+    HDSDP_FREE(colObj);
+    HDSDP_FREE(rowRhs);
+    
+    return (int) retcode;
+}
+
+static int file_io_sdpa( char *fname ) {
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
     
@@ -172,8 +295,24 @@ exit_cleanup:
     return (int) retcode;
 }
 
-int test_solver( char *fname ) {
+int test_file_io( char *fname ) {
     
+    int retcode = HDSDP_RETCODE_OK;
+    
+    int iFileType = get_file_type(fname);
+    
+    if ( iFileType == FILE_TYPE_MPS ) {
+        retcode = file_io_mps(fname);
+    } else if ( iFileType == FILE_TYPE_SDPA ) {
+        retcode = file_io_sdpa(fname);
+    } else {
+        hdsdp_printf("Unsupported file type. Only 'mps' and 'dat-s' are supported \n");
+    }
+    
+    return retcode;
+}
+
+int test_solver( char *fname ) {
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
     
@@ -268,3 +407,60 @@ exit_cleanup:
     return (int) retcode;
 }
 
+int test_mat( char *path ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    int nRow = 0;
+    int nCol = 0;
+    int *Ap = NULL;
+    int *Ai = NULL;
+    double *Ax = NULL;
+    double *dRhs = NULL;
+    double *dLhs = NULL;
+    
+    HDSDP_CALL(HUtilGetSparseMatrix(path, &nRow, &nCol, &Ap, &Ai, &Ax, &dRhs));
+    HDSDP_INIT(dLhs, double, nCol);
+    
+    double dResidual = 0.0;
+    
+    hdsdp_linsys_fp *chol = NULL;
+    
+    HDSDP_CALL(HFpLinsysCreate(&chol, nCol, HDSDP_LINSYS_SPARSE_DIRECT));
+    HDSDP_CALL(HFpLinsysSymbolic(chol, Ap, Ai));
+    
+    double dTimeStart = HUtilGetTimeStamp();
+    HDSDP_CALL(HFpLinsysNumeric(chol, Ap, Ai, Ax));
+    HDSDP_CALL(HFpLinsysSolve(chol, 1, dRhs, dLhs));
+    
+    for ( int i = 0, j; i < nCol; ++i ) {
+        for ( j = Ap[i]; j < Ap[i + 1]; ++j ) {
+            dRhs[Ai[j]] -= dLhs[i] * Ax[j];
+            if ( Ai[j] != i ) {
+                dRhs[i] -= dLhs[Ai[j]] * Ax[j];
+            }
+        }
+    }
+    
+    for ( int iCol = 0; iCol < nCol; ++iCol ) {
+        dResidual += dRhs[iCol] * dRhs[iCol];
+    }
+    
+    printf("Residual:     %e \n", sqrt(dResidual));
+    printf("Elapsed Time: %f seconds \n ", HUtilGetTimeStamp() - dTimeStart);
+    
+exit_cleanup:
+    
+    if ( retcode != HDSDP_RETCODE_OK ) {
+        printf("Failed \n");
+    }
+    
+    HDSDP_FREE(Ap);
+    HDSDP_FREE(Ai);
+    HDSDP_FREE(Ax);
+    HDSDP_FREE(dLhs);
+    HDSDP_FREE(dRhs);
+    HFpLinsysDestroy(&chol);
+    
+    return (int) retcode;
+}

@@ -63,7 +63,7 @@ static inline void LPConeIUpdateBuffer( hdsdp_cone_lp *cone, double dCCoef, doub
     
     HDSDP_ZERO(target, double, cone->nCol);
     
-    csp_Axpby(cone->nRow, cone->rowMatBeg, cone->rowMatIdx, cone->rowMatElem, dACoefScal, dACoef, target);
+    csp_Axpy(cone->nRow, cone->rowMatBeg, cone->rowMatIdx, cone->rowMatElem, dACoefScal, dACoef, target);
     
     for ( int iCol = 0; iCol < cone->nCol; ++iCol ) {
         target[iCol] += dCCoef * cone->colObj[iCol];
@@ -271,7 +271,7 @@ extern hdsdp_retcode LPConeGetKKT( hdsdp_cone_lp *cone, int iCone, void *kkt, in
         }
     }
     
-    csp_ATxpby(cone->nRow, cone->rowMatBeg, cone->rowMatIdx,
+    csp_ATxpy(cone->nRow, cone->rowMatBeg, cone->rowMatIdx,
               cone->rowMatElem, 1.0, cone->colDualInverse, Hkkt->dASinvVec);
     
     if ( cone->dualResidual ) {
@@ -283,7 +283,7 @@ extern hdsdp_retcode LPConeGetKKT( hdsdp_cone_lp *cone, int iCone, void *kkt, in
         for ( int iCol = 0; iCol < cone->nCol; ++iCol ) {
             cone->colBuffer[iCol] = cone->dualResidual * cone->colDualInverse[iCol] * cone->colDualInverse[iCol];
         }
-        csp_ATxpby(cone->nRow, cone->rowMatBeg, cone->rowMatIdx, cone->rowMatElem,
+        csp_ATxpy(cone->nRow, cone->rowMatBeg, cone->rowMatIdx, cone->rowMatElem,
                    1.0, cone->colBuffer, Hkkt->dASinvRdSinvVec);
     }
     
@@ -323,7 +323,7 @@ extern hdsdp_retcode LPConeGetKKT( hdsdp_cone_lp *cone, int iCone, void *kkt, in
             cone->colBuffer[iCol] = cone->colObj[iCol] * cone->colDualInverse[iCol] * cone->colDualInverse[iCol];
         }
         
-        csp_ATxpby(cone->nRow, cone->rowMatBeg, cone->rowMatIdx, cone->rowMatElem, 1.0, cone->colBuffer, Hkkt->dASinvCSinvVec);
+        csp_ATxpy(cone->nRow, cone->rowMatBeg, cone->rowMatIdx, cone->rowMatElem, 1.0, cone->colBuffer, Hkkt->dASinvCSinvVec);
     }
     
     return HDSDP_RETCODE_OK;
@@ -490,7 +490,7 @@ extern double LPConeTraceCX( hdsdp_cone_lp *cone, double *dConePrimal ) {
 
 extern void LPConeATimesX( hdsdp_cone_lp *cone, double *dPrimalX, double *dATimesX ) {
     
-    csp_ATxpby(cone->nRow, cone->rowMatBeg, cone->rowMatIdx,
+    csp_ATxpy(cone->nRow, cone->rowMatBeg, cone->rowMatIdx,
                cone->rowMatElem, 1.0, dPrimalX, dATimesX);
     
     return;
