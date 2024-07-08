@@ -21,9 +21,6 @@
 
 #include <math.h>
 
-#define PRIMAL_HISTORY  (3)
-
-
 /* Implement primal statistics for primal IPM. The following statistics are collected to
  determine the convergence of primal IPM
  
@@ -60,8 +57,14 @@ static hdsdp_retcode HPrimalStatsInit( hdsdp_primal_stats *stats, int nCol, hdsd
     
     stats->params = params;
     stats->nCol = nCol;
+    stats->dCondNumberEst = HDSDP_INFINITY;
+    stats->dIterDiffMetric = HDSDP_INFINITY;
+    stats->dIterDiffMetricScal = HDSDP_INFINITY;
+    stats->dIterDiffMetricThresh = HDSDP_INFINITY;
+    stats->dIterDiffMetricAggressive = HDSDP_INFINITY;
+    
     HDSDP_INIT(stats->dPrimalMuHistory, double, params->nMaxIter);
-    HDSDP_INIT(stats->dPrimalIterHistory, double, PRIMAL_HISTORY * nCol);
+    HDSDP_INIT(stats->dPrimalIterHistory, double, nCol);
     HDSDP_MEMCHECK(stats->dPrimalIterHistory);
     
 exit_cleanup:
@@ -70,21 +73,88 @@ exit_cleanup:
 
 static void HPrimalStatsUpdate( hdsdp_primal_stats *stats, int iIter, double *dColVal, double dMu ) {
     
-    HDSDP_MEMCPY(stats->dPrimalIterHistory + stats->nCol,
-                 stats->dPrimalIterHistory, double, stats->nCol);
-    HDSDP_MEMCPY(stats->dPrimalIterHistory, dColVal, double, stats->nCol);
     stats->dPrimalMuHistory[iIter] = dMu;
+    stats->iIterLast = iIter;
+    
+    if ( iIter <= 1 ) {
+        HDSDP_MEMCPY(stats->dPrimalIterHistory, dColVal, double, stats->nCol);
+        return;
+    }
     
     /* Compute convergence statistics */
+    stats->dIterDiffMetric = 0.0;
+    stats->dIterDiffMetricScal = 0.0;
+    stats->dIterDiffMetricThresh = 0.0;
+    
+    /* Aggressive statistic ignores difference in the small-magnitude elements*/
+    stats->dIterDiffMetricAggressive = 0.0;
+    
+    /* Compute distance between consecutive iterates. Use infinity norm instead of 2 norm */
+    for ( int iCol = 0; iCol < stats->nCol; ++iCol ) {
+        
+        /* More aggressive when a history point is used */
+        double dColValElem = stats->dPrimalIterHistory[iCol];
+        double dColValDiff = fabs(dColVal[iCol] - stats->dPrimalIterHistory[iCol]);
+        double dColValScalDiff = dColValDiff / dColValElem;
+        
+        stats->dIterDiffMetric = HDSDP_MAX(dColValDiff, stats->dIterDiffMetric);
+        stats->dIterDiffMetricScal = HDSDP_MAX(dColValScalDiff, stats->dIterDiffMetricScal);
+        
+        /* Compute thresholded difference */
+        if ( dColValElem > stats->params->dScalingThreshTol ) {
+            stats->dIterDiffMetricThresh = HDSDP_MAX(dColValScalDiff, stats->dIterDiffMetricThresh);
+            stats->dIterDiffMetricAggressive = HDSDP_MAX(dColValScalDiff, stats->dIterDiffMetricAggressive);
+        } else {
+            stats->dIterDiffMetricThresh = HDSDP_MAX(dColValDiff, stats->dIterDiffMetricThresh);
+        }
+    }
+    
+    if ( stats->dIterDiffMetricThresh < 1.0 ) {
+        stats->dCondNumberEst = (1 + stats->dIterDiffMetricThresh) / (1 - stats->dIterDiffMetricThresh);
+        stats->dCondNumberEst = stats->dCondNumberEst * stats->dCondNumberEst;
+    } else {
+        stats->dCondNumberEst = HDSDP_INFINITY;
+    }
+    
+    /* Overwrite history */
+    HDSDP_MEMCPY(stats->dPrimalIterHistory, dColVal, double, stats->nCol);
     
     return;
 }
 
-static int HPrimalStatsSuperlinerTest( hdsdp_primal_stats *stats ) {
+#ifndef LSUPERTEST
+#define LSUPERTEST (5)
+#endif
+static void HPrimalStatsSuperlinerTest( hdsdp_primal_stats *stats ) {
     
+    /* Take most recent 5 iterates */
     int isSuperLin = 0;
+    int nSuperTest = LSUPERTEST;
+    double *dMuHist = stats->dPrimalMuHistory;
     
-    return isSuperLin;
+    if ( stats->iIterLast < 3 ) {
+        stats->isSuperLin = 0;
+        return;
+    }
+    
+    if ( stats->iIterLast <= nSuperTest * 2 ) {
+        nSuperTest = stats->iIterLast / 2;
+    }
+    
+    double dRecentAvg = 0.0;
+    double dHistAvg = 0.0;
+    
+    for ( int iElem = 0; iElem < nSuperTest; ++iElem ) {
+        dRecentAvg += log(dMuHist[stats->iIterLast - iElem]) - log(dMuHist[stats->iIterLast - iElem - 1]);
+        dHistAvg += log(dMuHist[stats->iIterLast - nSuperTest - iElem]) - log(dMuHist[stats->iIterLast - nSuperTest - iElem - 1]);
+    }
+    
+    if ( dRecentAvg < dHistAvg ) {
+        isSuperLin = 1;
+    }
+    
+    stats->isSuperLin = isSuperLin;
+    return;
 }
 
 static void HPrimalStatsClear( hdsdp_primal_stats *stats ) {
@@ -117,17 +187,17 @@ static hdsdp_lpsolver_params HLpSolverIGetDefaultParams(void) {
     hdsdp_lpsolver_params params;
     
     /* Optimization tolerance */
-    params.dAbsOptTol = 1e-06;
-    params.dAbsFeasTol = 1e-06;
-    params.dRelOptTol = 1e-10;
+    params.dAbsOptTol = 1.0;
+    params.dAbsFeasTol = 1.0;
+    params.dRelOptTol = 1e-08;
     params.dRelFeasTol = 1e-10;
     
     params.dKKTPrimalReg = 1e-14;
     params.dKKTDualReg = 1e-12;
     
     params.dPotentialRho = 2.0;
-    params.dPrimalUpdateStep = 0.95;
-    params.dDualUpdateStep = 0.95;
+    params.dPrimalUpdateStep = 0.995;
+    params.dDualUpdateStep = 0.995;
     params.dIterativeTol = 1e-12;
     params.dScalingThreshTol = 1e-04;
     params.dBarrierLowerBnd = 1e-16;
@@ -370,11 +440,54 @@ static int HLpSolverIComputeSolutionStats( hdsdp_lpsolver *HLp, int iIter ) {
     }
     
     /* Logging */
+#ifdef HDSDP_PIPMMETRIC_DEBUG
+    hdsdp_printf("    %5d  %+15.8e  %+15.8e  %8.2e  %8.2e  %5.2f %5.2f  %4.1f  | F/S: %4.1f"
+                 " Cond: %6.1e | L2: %6.1e | Scl: %6.1e | SL2: %6.1e | Agg: %6.1e Sup [%d] \n",
+                 iIter, HLp->pObjVal, HLp->dObjVal, HLp->dPrimalInfeasRel, HLp->dDualInfeasRel,
+                 HLp->pStep, HLp->dStep, HUtilGetTimeStamp() - HLp->dTStart, HLpKKTGetFactorSolveTimeRatio(HLp->Hkkt),
+                 HLp->pstats->dCondNumberEst, HLp->pstats->dIterDiffMetric,
+                 HLp->pstats->dIterDiffMetricScal, HLp->pstats->dIterDiffMetricThresh, HLp->pstats->dIterDiffMetricAggressive,
+                 HLp->pstats->isSuperLin);
+#else
     hdsdp_printf("    %5d  %+15.8e  %+15.8e  %8.2e  %8.2e  %5.2f %5.2f  %4.1f \n",
                  iIter, HLp->pObjVal, HLp->dObjVal, HLp->dPrimalInfeasRel, HLp->dDualInfeasRel,
            HLp->pStep, HLp->dStep, HUtilGetTimeStamp() - HLp->dTStart);
+#endif
     
     return goOn;
+}
+
+static int HLpSolverICheckPrimalStats( hdsdp_lpsolver *HLp, int iIter, double dAdaTol ) {
+    
+    int iPrimalStart = 0;
+    
+    HPrimalStatsUpdate(HLp->pstats, iIter, HLp->dColVal, HLp->dBarrierMu);
+    
+    if ( iIter == 0 ) {
+        return 0;
+    }
+    
+    HPrimalStatsSuperlinerTest(HLp->pstats);
+    
+    /* Determine whether to switch to primal IPM based on convergence statistics */
+    double dCondUbEst = HLp->pstats->dCondNumberEst;
+    double dEuclideanDist = HLp->pstats->dIterDiffMetric;
+//    double dScalDist = HLp->pstats->dIterDiffMetricScal;
+//    double dThreshDist = HLp->pstats->dIterDiffMetricThresh;
+//    double dThreshAggDist = HLp->pstats->dIterDiffMetricAggressive;
+    
+    int iPrimalStartCond1 = 0;
+    int iPrimalStartCond2 = 0;
+    
+    iPrimalStartCond1 = HLp->params.iPrimalMethod && (HLp->params.LpMethod != LP_ITER_PRIMAL);
+    iPrimalStartCond2 = (dCondUbEst < 100.0 || dEuclideanDist < dAdaTol) && \
+                        (HLp->dPrimalDualGapRel < 1e-03 && HLp->dPrimalDualGapRel > HLp->params.dRelOptTol * 1e+02);
+    
+    if ( iPrimalStartCond1 && iPrimalStartCond2 && !HLp->pstats->isSuperLin ) {
+        iPrimalStart = 1;
+    }
+    
+    return iPrimalStart;
 }
 
 static double HLpSolverISingleRatioTest( int nElem, double *dVal, double *dStep ) {
@@ -399,13 +512,6 @@ static void HLpSolverIRatioTest( hdsdp_lpsolver *HLp, double *dPrimalStep, doubl
     *dDualStep = HLpSolverISingleRatioTest(HLp->nCol, HLp->dColDual, HLp->dColDualDirection);
     
     return;
-}
-
-static int HLpSolverICollectIterationStats( hdsdp_lpsolver *HLp ) {
-    
-    
-    
-    return 1;
 }
 
 /* Primal interior point method main algorithm */
@@ -516,8 +622,8 @@ static hdsdp_retcode HLpSolverITakePrimalDualStep( hdsdp_lpsolver *HLp ) {
     
     /* Done with corrector step */
     HLpSolverIRatioTest(HLp, &HLp->pStep, &HLp->dStep);
-    HLp->pStep = HDSDP_MIN(0.995 * HLp->pStep, 1.0);
-    HLp->dStep = HDSDP_MIN(0.995 * HLp->dStep, 1.0);
+    HLp->pStep = HDSDP_MIN(HLp->params.dPrimalUpdateStep * HLp->pStep, 1.0);
+    HLp->dStep = HDSDP_MIN(HLp->params.dDualUpdateStep * HLp->dStep, 1.0);
     
     /* Take step into next iteration */
     axpy(&HLp->nCol, &HLp->pStep, HLp->dColValDirection, &HIntConstantOne, HLp->dColVal, &HIntConstantOne);
@@ -532,6 +638,8 @@ exit_cleanup:
 static hdsdp_retcode HLpSolverITakePrimalStep( hdsdp_lpsolver *HLp ) {
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    
     
     
 exit_cleanup:
@@ -760,6 +868,8 @@ extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp ) {
     int nMaxIter = HLp->params.nMaxIter;
     int goOn = 0;
     int iPrimalStart = 0;
+    double dAdaTol = 1e-05;
+    double dFactorSolveTimeRatio = 1.0;
     
     hdsdp_printf("Opimizing an LP of %d variables and %d constraints\n", HLp->nCol, HLp->nRow);
     HLpSolverIComputeSolutionStats(HLp, 0);
@@ -778,7 +888,6 @@ extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp ) {
         }
         
         goOn = HLpSolverIComputeSolutionStats(HLp, nIter);
-        iPrimalStart = HLpSolverICollectIterationStats(HLp);
         
         if ( HLp->dPrimalDualGap != HLp->dPrimalDualGap ) {
             HLp->LpStatus = HDSDP_NUMERICAL;
@@ -794,6 +903,9 @@ extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp ) {
             HLp->LpStatus = HDSDP_PRIMAL_DUAL_OPTIMAL;
             break;
         }
+        
+        iPrimalStart += HLpSolverICheckPrimalStats(HLp, nIter, dAdaTol);
+        dFactorSolveTimeRatio = HLpKKTGetFactorSolveTimeRatio(HLp->Hkkt);
     }
     
 exit_cleanup:

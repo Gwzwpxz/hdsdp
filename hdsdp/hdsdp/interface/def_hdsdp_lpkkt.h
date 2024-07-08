@@ -42,6 +42,9 @@ typedef struct {
     /* Iterative solver for normal equation */
     hdsdp_linsys *KKTIterative;
     
+    double dSolveTime;
+    double dFactorTime;
+    
     int nSolve;
     int nFactor;
     

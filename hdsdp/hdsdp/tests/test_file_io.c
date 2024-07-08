@@ -89,6 +89,10 @@ static int file_io_mps( char *fname ) {
                                            &Aeqp, &Aeqi, &Aeqx, &Aineqp, &Aineqi, &Aineqx, &rowRhs,
                                            &colObj, &nColUb, &colUbIdx, &colUbElem);
     
+    if ( retcode != HDSDP_RETCODE_OK ) {
+        goto exit_cleanup;
+    }
+    
     assert( nIneqRow == 0 && nColUb == 0 );
     
     HDSDP_INIT(AeqTransp, int, nRow + 1);
@@ -116,12 +120,11 @@ static int file_io_mps( char *fname ) {
     HDSDP_CALL(HLpSolverCreate(&lpsolve));
     HDSDP_CALL(HLpSolverInit(lpsolve, nRow, nCol));
     HDSDP_CALL(HLpSolverSetData(lpsolve, Aeqp, Aeqi, Aeqx, AeqTransp, AeqTransi, AeqTransx, rowRhs, colObj));
-    
     HDSDP_CALL(HLpSolverOptimize(lpsolve));
     
-    HLpSolverDestroy(&lpsolve);
-    
 exit_cleanup:
+    
+    HLpSolverDestroy(&lpsolve);
     
     HDSDP_FREE(Aineqp);
     HDSDP_FREE(Aineqi);

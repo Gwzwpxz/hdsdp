@@ -162,6 +162,8 @@ static hdsdp_retcode HLpKKTISetupNormal( hdsdp_lp_kkt *kkt, double *dScalingMatr
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
     
+    double dTStart = HUtilGetTimeStamp();
+    
     /* Regularize scaling matrix */
     for ( int iCol = 0; iCol < kkt->nLpCol; ++iCol ) {
         kkt->dScalingBuffer[iCol] = dScalingMatrix[iCol] * dScalingMatrix[iCol] + dPrimalReg;
@@ -199,6 +201,7 @@ static hdsdp_retcode HLpKKTISetupNormal( hdsdp_lp_kkt *kkt, double *dScalingMatr
     
     /* Set up the normal equation with scaling matrix */
     HDSDP_CALL(HFpLinsysNumeric(kkt->KKTDirect, kkt->KKTMatBeg, kkt->KKTMatIdx, kkt->KKTMatElem));
+    kkt->dFactorTime += HUtilGetTimeStamp() - dTStart;
  
 exit_cleanup:
     return retcode;
@@ -284,6 +287,7 @@ extern hdsdp_retcode HLpKKTSetup( hdsdp_lp_kkt *kkt, int LpMethod, double *dScal
     kkt->LpMethod = LpMethod;
     
     HDSDP_CALL(HLpKKTISetupNormal(kkt, dScalingMatrix, dPrimalReg, dDualReg));
+    kkt->nFactor += 1;
     
 exit_cleanup:
     return retcode;
@@ -301,6 +305,7 @@ extern hdsdp_retcode HLpKKTSolveAugmented( hdsdp_lp_kkt *kkt, double *dLhsVec, d
     }
     
     HDSDP_CALL(HFpLinsysSolve(kkt->KKTDirect, 1, dLhsVec, dRhsVec));
+    kkt->nSolve += 1;
     
 exit_cleanup:
     return retcode;
@@ -314,11 +319,26 @@ extern hdsdp_retcode HLpKKTSolveNormalEqn( hdsdp_lp_kkt *kkt, int nRhs, double *
     if ( kkt->LpMethod == LP_ITER_PRIMAL ) {
         HDSDP_CALL(HFpLinsysSolve(kkt->KKTIterative, nRhs, dLhsVec, dRhsVec));
     } else {
+        double dTStart = HUtilGetTimeStamp();
         HDSDP_CALL(HFpLinsysSolve(kkt->KKTDirect, nRhs, dLhsVec, dRhsVec));
+        kkt->dSolveTime += HUtilGetTimeStamp() - dTStart;
+        kkt->nSolve += 1;
     }
     
 exit_cleanup:
     return retcode;
+}
+
+extern double HLpKKTGetFactorSolveTimeRatio( hdsdp_lp_kkt *kkt ) {
+    
+    if ( kkt->nFactor == 0 ) {
+        return 1.0;
+    }
+    
+    double dFactorTime = kkt->dFactorTime / kkt->nFactor;
+    double dSolveTime =  kkt->dSolveTime / kkt->nSolve;
+    
+    return dFactorTime / dSolveTime;
 }
 
 extern void HLpKKTClear( hdsdp_lp_kkt *kkt ) {

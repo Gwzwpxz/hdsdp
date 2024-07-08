@@ -92,12 +92,16 @@ typedef struct {
     hdsdp_lpsolver_params *params;
     
     int nCol;
+    int iIterLast;
+    int isSuperLin;
+    
     double *dPrimalIterHistory;
     double *dPrimalMuHistory;
     double dCondNumberEst;
     double dIterDiffMetric;
     double dIterDiffMetricScal;
     double dIterDiffMetricThresh;
+    double dIterDiffMetricAggressive;
     
 } hdsdp_primal_stats;
 
