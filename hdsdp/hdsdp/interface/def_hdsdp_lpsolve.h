@@ -49,6 +49,9 @@ typedef struct {
     /* Lower bound of barrier parameter*/
     double dBarrierLowerBnd;
     
+    /* Solution time */
+    double dTimeLimit;
+    
     /* Starting point */
     int iStartMethod;
     
@@ -69,6 +72,20 @@ typedef struct {
     int LpMethod;
     
 } hdsdp_lpsolver_params;
+
+typedef struct {
+    
+    double dRhsOneNorm;
+    double dRhsInfNorm;
+    double dRhsTwoNorm;
+    double dObjOneNorm;
+    double dObjTwoNorm;
+    double dObjInfNorm;
+    
+    int isNoObj;
+    int isNoRhs;
+    
+} hdsdp_lpsolver_stats;
 
 typedef struct {
     
@@ -107,28 +124,24 @@ typedef struct {
     double *dColScal;
     double *dRowScal;
     
+    hdsdp_lpsolver_stats lpstats;
     hdsdp_lpsolver_params params;
-    hdsdp_primal_stats *stats;
+    hdsdp_primal_stats *pstats;
     
     /* Solution status */
     hdsdp_status LpStatus;
-    
     /* x */
     double *dColVal;
     /* s */
     double *dColDual;
     /* y */
     double *dRowDual;
-    
     /* A * x - b * tau */
     double *dPrimalInfeasVec;
-    
     /* A' * y + s - c * tau */
     double *dDualInfeasVec;
-    
     /* XSe */
     double *dComplVec;
-    
     /* Scaling matrix */
     double *dScalingMatrix;
     
@@ -140,6 +153,12 @@ typedef struct {
     double pObjVal;
     double dObjVal;
     double dPrimalDualGap;
+    double dPrimalDualGapRel;
+    
+    double dPrimalInfeas;
+    double dPrimalInfeasRel;
+    double dDualInfeas;
+    double dDualInfeasRel;
     
     double dBarrierMu;
     
@@ -150,6 +169,7 @@ typedef struct {
     double *dAuxiColVector1;
     double *dAuxiColVector2;
     double *dAuxiColVector3;
+    double *dAuxiColVector4;
     double *dAuxiRowVector1;
     double *dAuxiRowVector2;
     
@@ -159,6 +179,8 @@ typedef struct {
     
     double dKappaDirection;
     double dTauDirection;
+    
+    double dTStart;
 
 } hdsdp_lpsolver;
 

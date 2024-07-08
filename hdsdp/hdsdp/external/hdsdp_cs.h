@@ -21,6 +21,8 @@
 #ifndef _HDSDP_CS_
 #define _HDSDP_CS_
 
+#include "stddef.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
