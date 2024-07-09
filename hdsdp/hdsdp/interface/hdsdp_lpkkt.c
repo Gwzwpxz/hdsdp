@@ -1,7 +1,9 @@
 #ifdef HEADERPATH
 #include "interface/hdsdp_lpkkt.h"
+#include "linalg/sparse_opts.h"
 #else
 #include "hdsdp_lpkkt.h"
+#include "sparse_opts.h"
 #endif
 
 /* Given scaling matrix D. Solve linear system
@@ -96,7 +98,6 @@ static hdsdp_retcode HLpKKTIAnalyze( hdsdp_lp_kkt *kkt, int iNormalEqn ) {
         
         int nRow = kkt->nLpRow;
         int nCol = kkt->nLpCol;
-        int nElem = kkt->nLpElem;
         
         const int *colMatBeg = kkt->colMatBeg;
         const int *colMatIdx = kkt->colMatIdx;
@@ -327,6 +328,14 @@ extern hdsdp_retcode HLpKKTSolveNormalEqn( hdsdp_lp_kkt *kkt, int nRhs, double *
     
 exit_cleanup:
     return retcode;
+}
+
+extern void HLpKKTMultiply( hdsdp_lp_kkt *kkt, double dXCoeff, double *dXVec, double *dYVec ) {
+    
+    HDSDP_ZERO(dYVec, double, kkt->nLpRow);
+    csp_Axpy(kkt->nLpRow, kkt->KKTMatBeg, kkt->KKTMatIdx, kkt->KKTMatElem, dXCoeff, dXVec, dYVec);
+    
+    return;
 }
 
 extern double HLpKKTGetFactorSolveTimeRatio( hdsdp_lp_kkt *kkt ) {

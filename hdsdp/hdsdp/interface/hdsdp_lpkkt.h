@@ -19,6 +19,7 @@ extern hdsdp_retcode HLpKKTInit( hdsdp_lp_kkt *kkt, int nRow, int nCol, int *col
 extern hdsdp_retcode HLpKKTSetup( hdsdp_lp_kkt *kkt, int LpMethod, double *dScalingMatrix, double dPrimalReg, double dDualReg );
 extern hdsdp_retcode HLpKKTSolveAugmented( hdsdp_lp_kkt *kkt, double *dLhsVec, double *dRhsVec );
 extern hdsdp_retcode HLpKKTSolveNormalEqn( hdsdp_lp_kkt *kkt, int nRhs, double *dLhsVec, double *dRhsVec );
+extern void HLpKKTMultiply( hdsdp_lp_kkt *kkt, double dXCoeff, double *dXVec, double *dYVec );
 extern double HLpKKTGetFactorSolveTimeRatio( hdsdp_lp_kkt *kkt );
 extern void HLpKKTClear( hdsdp_lp_kkt *kkt );
 extern void HLpKKTDestroy( hdsdp_lp_kkt **pkkt );

@@ -16,6 +16,7 @@
 #define LP_ITER_PRIMAL   (1)
 #define LP_ITER_HSD      (2)
     
+#define SCAL_NONE      (-1)
 #define SCAL_RUIZ      (0)
 #define SCAL_GEOMETRIC (1)
 #define SCAL_L2NORM    (2)
@@ -81,6 +82,10 @@ typedef struct {
     double dObjOneNorm;
     double dObjTwoNorm;
     double dObjInfNorm;
+    double dAMatFNorm;
+    double dAMatAbsNorm;
+    
+    int nAMatNz;
     
     int isNoObj;
     int isNoRhs;
@@ -144,8 +149,6 @@ typedef struct {
     double *dPrimalInfeasVec;
     /* A' * y + s - c * tau */
     double *dDualInfeasVec;
-    /* XSe */
-    double *dComplVec;
     /* Scaling matrix */
     double *dScalingMatrix;
     
@@ -158,6 +161,7 @@ typedef struct {
     double dObjVal;
     double dPrimalDualGap;
     double dPrimalDualGapRel;
+    double dProxNorm;
     
     double dPrimalInfeas;
     double dPrimalInfeasRel;
@@ -176,6 +180,14 @@ typedef struct {
     double *dAuxiColVector4;
     double *dAuxiRowVector1;
     double *dAuxiRowVector2;
+    
+    /* Embedded Krylov subspace solver */
+    double *dKrylovAuxVec1;
+    double *dKrylovAuxVec2;
+    double *dKrylovAuxVec3;
+    double *dKrylovAuxVec4;
+    double *dKrylovAuxVec5;
+    double *dKrylovAuxVec6;
     
     /* Self-dual embedding */
     double dKappa;
