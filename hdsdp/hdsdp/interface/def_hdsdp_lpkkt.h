@@ -39,9 +39,6 @@ typedef struct {
     /* Direct factorization of augmented system */
     hdsdp_linsys *KKTDirect;
     
-    /* Iterative solver for normal equation */
-    hdsdp_linsys *KKTIterative;
-    
     double dSolveTime;
     double dFactorTime;
     

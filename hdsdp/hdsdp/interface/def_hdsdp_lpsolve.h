@@ -151,6 +151,7 @@ typedef struct {
     double *dDualInfeasVec;
     /* Scaling matrix */
     double *dScalingMatrix;
+    double *dComplVec;
     
     hdsdp_lp_kkt *Hkkt;
     

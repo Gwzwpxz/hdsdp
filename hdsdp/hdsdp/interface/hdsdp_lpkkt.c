@@ -253,10 +253,6 @@ extern hdsdp_retcode HLpKKTInit( hdsdp_lp_kkt *kkt, int nRow, int nCol, int *col
     /* Start the analysis of normal equation */
     HDSDP_CALL(HLpKKTIAnalyze(kkt, 1));
     
-    /* Create sparse iterative solver */
-    HDSDP_CALL(HFpLinsysCreate(&kkt->KKTIterative, nRow, HDSDP_LINSYS_SPARSE_ITERATIVE));
-    HDSDP_CALL(HFpLinsysSymbolic(kkt->KKTIterative, kkt->KKTMatBeg, kkt->KKTMatIdx));
-    
     kkt->nFactor = 0;
     kkt->nSolve = 0;
     
@@ -315,17 +311,17 @@ exit_cleanup:
 extern hdsdp_retcode HLpKKTSolveNormalEqn( hdsdp_lp_kkt *kkt, int nRhs, double *dLhsVec, double *dRhsVec ) {
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    double dTStart = HUtilGetTimeStamp();
     
     /* Now only primal method can invoke normal equation */
     if ( kkt->LpMethod == LP_ITER_PRIMAL ) {
-        HDSDP_CALL(HFpLinsysSolve(kkt->KKTIterative, nRhs, dLhsVec, dRhsVec));
-    } else {
-        double dTStart = HUtilGetTimeStamp();
         HDSDP_CALL(HFpLinsysSolve(kkt->KKTDirect, nRhs, dLhsVec, dRhsVec));
-        kkt->dSolveTime += HUtilGetTimeStamp() - dTStart;
-        kkt->nSolve += 1;
+    } else {
+        HDSDP_CALL(HFpLinsysSolve(kkt->KKTDirect, nRhs, dLhsVec, dRhsVec));
     }
     
+    kkt->dSolveTime += HUtilGetTimeStamp() - dTStart;
+    kkt->nSolve += 1;
 exit_cleanup:
     return retcode;
 }
@@ -364,8 +360,6 @@ extern void HLpKKTClear( hdsdp_lp_kkt *kkt ) {
     HDSDP_FREE(kkt->dScaledColBuffer);
     
     HFpLinsysDestroy(&kkt->KKTDirect);
-    HFpLinsysDestroy(&kkt->KKTIterative);
-    
     HDSDP_ZERO(kkt, hdsdp_lp_kkt, 1);
     
     return;
