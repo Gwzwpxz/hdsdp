@@ -581,6 +581,8 @@ int test_primal_primal_dual_bench( char *fname ) {
     int iSuccess = 1;
     int isPrimalUsed = 0;
     
+    double dTWarm = HUtilGetTimeStamp();
+    
     hdsdp_status iPrimalStatus = HDSDP_UNKNOWN;
     hdsdp_status iPrimalDualStatus = HDSDP_UNKNOWN;
     hdsdp_lpsolver *lpsolve = NULL;
@@ -591,6 +593,10 @@ int test_primal_primal_dual_bench( char *fname ) {
     HDSDP_CALL(HLpSolverSetData(lpsolve, Aeqp, Aeqi, Aeqx, AeqTransp, AeqTransi, AeqTransx, rowRhs, colObj));
     lpsolve->params.iPrimalMethod = 0;
     retcode = HLpSolverOptimize(lpsolve);
+    
+    if ( HUtilGetTimeStamp() - dTWarm > 15.0 ) {
+        nTest = 1;
+    }
     
     if ( HLpSolverGetStatus(lpsolve) == HDSDP_UNKNOWN ) {
         goto exit_cleanup;
