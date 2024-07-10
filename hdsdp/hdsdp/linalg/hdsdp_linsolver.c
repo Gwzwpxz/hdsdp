@@ -103,8 +103,9 @@ static hdsdp_retcode pardisoLinSolverCreateIndefinite( void **pchol, int nCol ) 
     set_pardiso_param(pds->iparm, PARDISO_PARAM_SYMBOLIC, PARDISO_PARAM_SYMBOLIC_MMD);
     
     /* More perturbation for indefinite matrices */
-    set_pardiso_param(pds->iparm, PARDISO_PARAM_PERTURBATION, 8);
+    set_pardiso_param(pds->iparm, PARDISO_PARAM_PERTURBATION, 13);
     set_pardiso_param(pds->iparm, PARDISO_PARAM_INPLACE, 1);
+    set_pardiso_param(pds->iparm, PARDISO_PARAM_REFINEMENT, 0);
     set_pardiso_param(pds->iparm, PARDISO_PARAM_INDEX, PARDISO_PARAM_INDEX_C);
     set_pardiso_param(pds->iparm, PARDISO_PARAM_DIAGONAL, PARDISO_PARAM_DIAGONAL_ON);
     

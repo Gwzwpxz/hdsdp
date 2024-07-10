@@ -194,18 +194,18 @@ static hdsdp_lpsolver_params HLpSolverIGetDefaultParams(void) {
     params.dAbsOptTol = 1.0;
     params.dAbsFeasTol = 1.0;
     params.dRelOptTol = 1e-10;
-    params.dRelFeasTol = 1e-10;
+    params.dRelFeasTol = 1e-12;
     
     params.dKKTPrimalReg = 1e-14;
     params.dKKTDualReg = 1e-12;
     
-    params.dPotentialRho = 100.0;
+    params.dPotentialRho = 2.0;
     params.dPrimalUpdateStep = 0.995;
     params.dDualUpdateStep = 0.995;
     params.dIterativeTol = 1e-12;
     params.dScalingThreshTol = 1e-04;
     params.dBarrierLowerBndCoeff = 1e-03;
-    params.dTimeLimit = 3600.0;
+    params.dTimeLimit = 7200.0;
     
     params.nThreads = 8;
     params.nScalIter = 10;
@@ -495,6 +495,10 @@ static int HLpSolverICheckPrimalStats( hdsdp_lpsolver *HLp, int iIter) {
     HPrimalStatsUpdate(HLp->pstats, iIter, HLp->dColVal, HLp->dBarrierMu);
     
     if ( iIter == 0 ) {
+        return 0;
+    }
+    
+    if ( HLpKKTGetFactorSolveTimeRatio(HLp->Hkkt) < 50.0 ) {
         return 0;
     }
     
@@ -853,6 +857,8 @@ static hdsdp_retcode HLpSolverIConjGrad( hdsdp_lpsolver *HLp, int nMaxIter, doub
     /* Initial guess */
     HDSDP_CALL(HLpKKTSolveNormalEqn(HLp->Hkkt, 1, rhsVec, iterVec));
     
+    goto exit_cleanup;
+    
     HDSDP_MEMCPY(iterResi, rhsVec, double, nCol);
     HLpSolverIMatVec(HLp, -1.0, iterVec, iterResi);
     
@@ -1040,7 +1046,7 @@ static hdsdp_retcode HLpSolverITakePrimalStep( hdsdp_lpsolver *HLp ) {
     if ( isDualFeas ) {
         HDSDP_MEMCPY(HLp->dColDual, dColTmp, double, HLp->nCol);
         dBarrierTarget = dot(&HLp->nCol, HLp->dColVal, &HIntConstantOne, HLp->dColDual, &HIntConstantOne);
-        dBarrierTarget = dBarrierTarget / dPotentialRho;
+        dBarrierTarget = dBarrierTarget / (HLp->nCol * dPotentialRho);
         dBarrierTarget = HDSDP_MIN(dBarrierTarget, HLp->dBarrierMu);
     } else {
         double dBarrierStep = HDSDP_MIN(HLp->pStep, HLp->dStep);
