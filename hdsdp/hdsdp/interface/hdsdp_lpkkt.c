@@ -86,7 +86,7 @@ static hdsdp_retcode HLpKKTIAnalyze( hdsdp_lp_kkt *kkt, int iNormalEqn ) {
         HDSDP_MEMCHECK(kkt->KKTMatElem);
         
         /* Symbolic analysis */
-        HDSDP_CALL(HFpLinsysCreate(&kkt->KKTDirect, nKKTCol, HDSDP_LINSYS_SPARSE_DIRECT));
+        HDSDP_CALL(HFpLinsysCreate(&kkt->KKTDirect, nKKTCol, HDSDP_LINSYS_SPARSE_INDEFINITE));
         HDSDP_CALL(HFpLinsysSymbolic(kkt->KKTDirect, kkt->KKTMatBeg, kkt->KKTMatIdx));
         
     } else {

@@ -1346,7 +1346,7 @@ extern hdsdp_retcode HFpLinsysCreate( hdsdp_linsys_fp **pHLin, int nCol, linsys_
             HLinsys->cholCreate = pardisoLinSolverCreateIndefinite;
             HLinsys->cholSetParam = pardisoLinSolverSetThreads;
             HLinsys->cholSymbolic = pardisoLinSolverSymbolic;
-            HLinsys->cholNumeric = pardisoLinSolverNumeric;
+            HLinsys->cholNumeric = pardisoLinSolverStableNumeric;
             HLinsys->cholPsdCheck = pardisoLinSolverPsdCheck;
             HLinsys->cholFSolve = pardisoLinSolverForwardN;
             HLinsys->cholBSolve = pardisoLinSolverBackwardN;
