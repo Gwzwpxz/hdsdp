@@ -193,8 +193,8 @@ static hdsdp_lpsolver_params HLpSolverIGetDefaultParams(void) {
     /* Optimization tolerance */
     params.dAbsOptTol = 1.0;
     params.dAbsFeasTol = 1.0;
-    params.dRelOptTol = 1e-12;
-    params.dRelFeasTol = 1e-12;
+    params.dRelOptTol = 1e-08;
+    params.dRelFeasTol = 1e-10;
     
     params.dKKTPrimalReg = 1e-14;
     params.dKKTDualReg = 1e-12;
@@ -1332,7 +1332,7 @@ extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp ) {
                  HLp->lpstats.dAMatAbsNorm, HLp->lpstats.dRhsOneNorm, HLp->lpstats.dObjOneNorm, HLp->lpstats.nAMatNz);
     
     HLpSolverIComputeSolutionStats(HLp, 0);
-    int nIter = 0;
+    int nIter = 1;
     
     for ( ; nIter <= nMaxIter; ++nIter ) {
         
