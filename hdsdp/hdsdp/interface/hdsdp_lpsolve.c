@@ -213,7 +213,7 @@ static hdsdp_lpsolver_params HLpSolverIGetDefaultParams(void) {
     
     params.iStartMethod = MEHROTRA_START;
     params.iScalMethod = SCAL_GEOMETRIC;
-    params.iPrimalMethod = 0;
+    params.iPrimalMethod = 1;
     
     params.LpMethod = LP_ITER_MEHROTRA;
     
@@ -509,15 +509,17 @@ static int HLpSolverICheckPrimalStats( hdsdp_lpsolver *HLp, int iIter) {
     
     int iPrimalStartCond1 = 0;
     int iPrimalStartCond2 = 0;
+    int iPrimalStartCond3 = 0;
     
     iPrimalStartCond1 = HLp->params.iPrimalMethod && (HLp->params.LpMethod != LP_ITER_PRIMAL);
     iPrimalStartCond2 = (dCondUbEst < 100.0 || dEuclideanDist < 1e-05) && \
                         (HLp->dPrimalDualGapRel < 1e-03 && HLp->dPrimalDualGapRel > HLp->params.dRelOptTol * 1e+02);
+    iPrimalStartCond3 = dEuclideanDist < 1e-05 && HLp->pStep >= 0.1;
     
     /* Relaxed condition for debugging */
 //    iPrimalStartCond2 = (dCondUbEst < 100.0 || dEuclideanDist < dAdaTol);
     
-    if ( iPrimalStartCond1 && iPrimalStartCond2 ) {// && !HLp->pstats->isSuperLin ) {
+    if ( iPrimalStartCond1 && (iPrimalStartCond2 || iPrimalStartCond3) )  {// && !HLp->pstats->isSuperLin ) {
         iPrimalStart = 1;
     }
     
