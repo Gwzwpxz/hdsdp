@@ -29,6 +29,7 @@
 int test_file_io( char *fname );
 int test_sdpa_io( char *fname );
 int test_mat( char *path );
+int test_primal_primal_dual_bench( char *fname );
 
 #define FILE_TYPE_UNKOWN (0)
 #define FILE_TYPE_MPS    (1)
@@ -50,6 +51,39 @@ static int get_file_type( char *fname ) {
     }
     
     return FILE_TYPE_UNKOWN;
+}
+
+static void get_sol_status( hdsdp_status status, char *sStatus ) {
+    
+    char *sOpt = "Optimal";
+    char *sNumerical = "Numerical";
+    char *sTimeLimit = "Timelimit";
+    char *sError = "Error";
+    char *sMaxIter = "MaxIter";
+    char *sInvalid = "FatalErr";
+    
+    switch (status) {
+        case HDSDP_PRIMAL_DUAL_OPTIMAL:
+            strcpy(sStatus, sOpt);
+            break;
+        case HDSDP_NUMERICAL:
+            strcpy(sStatus, sNumerical);
+            break;
+        case HDSDP_MAXITER:
+            strcpy(sStatus, sMaxIter);
+            break;
+        case HDSDP_TIMELIMIT:
+            strcpy(sStatus, sTimeLimit);
+            break;
+        case HDSDP_INTERNAL_ERROR:
+            strcpy(sStatus, sError);
+            break;
+        default:
+            strcpy(sStatus, sInvalid);
+            break;
+    }
+    
+    return;
 }
 
 static int file_io_mps( char *fname ) {
@@ -467,4 +501,207 @@ exit_cleanup:
     }
     
     return (int) retcode;
+}
+
+int test_primal_primal_dual_bench( char *fname ) {
+    
+    /* Implement benchmark routine for primal-dual and primal IPM.
+     For each problem, we solve the problem 5 times with primal-dual and primal solver. */
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+        
+    char prob[128] = "?";
+    int *Aeqp = NULL;
+    int *Aeqi = NULL;
+    double *Aeqx = NULL;
+    
+    int *AeqTransp = NULL;
+    int *AeqTransi = NULL;
+    double *AeqTransx = NULL;
+
+    int *Aineqp = NULL;
+    int *Aineqi = NULL;
+    double *Aineqx = NULL;
+    
+    int *colUbIdx = NULL;
+    double *colUbElem = NULL;
+    
+    int nCol;
+    int nRow;
+    int nEqRow;
+    int nIneqRow;
+    int nColUb;
+    
+    int nElem = 0;
+    double *rowRhs = NULL;
+    double *colObj = NULL;
+    
+    int *iTransBuffer = NULL;
+    
+    /* Reading the standard mps file */
+    retcode = (hdsdp_retcode) potLpMpsRead(fname, prob, &nRow, &nEqRow, &nIneqRow, &nCol, &nElem,
+                                           &Aeqp, &Aeqi, &Aeqx, &Aineqp, &Aineqi, &Aineqx, &rowRhs,
+                                           &colObj, &nColUb, &colUbIdx, &colUbElem);
+    
+    if ( retcode != HDSDP_RETCODE_OK ) {
+        goto exit_cleanup;
+    }
+    
+    assert( nIneqRow == 0 && nColUb == 0 );
+    
+    HDSDP_INIT(AeqTransp, int, nRow + 1);
+    HDSDP_INIT(AeqTransi, int, Aeqp[nCol]);
+    HDSDP_INIT(AeqTransx, double, Aeqp[nCol]);
+    HDSDP_INIT(iTransBuffer, int, nRow);
+    /* Compute transpose of Aeq */
+    for ( int iElem = 0; iElem < Aeqp[nCol]; ++iElem ) {
+        iTransBuffer[Aeqi[iElem]] += 1;
+    }
+    
+    dcs_cumsum(AeqTransp, iTransBuffer, nRow);
+    
+    int iPos = 0;
+    
+    for ( int iCol = 0; iCol < nCol; ++iCol ) {
+        for ( int iElem = Aeqp[iCol]; iElem < Aeqp[iCol + 1]; ++iElem ) {
+            AeqTransi[iPos = iTransBuffer[Aeqi[iElem]]++] = iCol;
+            AeqTransx[iPos] = Aeqx[iElem];
+        }
+    }
+    
+    /* Start benchmark */
+    int nTest = 10;
+    double dPrimalTime = 0.0;
+    double dPrimalDualTime = 0.0;
+    double dTimeStart = 0.0;
+    
+    char sPrimalStatus[20] = "";
+    char sPrimalDualStatus[20] = "";
+    
+    int iSuccess = 1;
+    int isPrimalUsed = 0;
+    
+    hdsdp_status iPrimalStatus = HDSDP_UNKNOWN;
+    hdsdp_status iPrimalDualStatus = HDSDP_UNKNOWN;
+    hdsdp_lpsolver *lpsolve = NULL;
+    
+    /* Warm-up */
+    HDSDP_CALL(HLpSolverCreate(&lpsolve));
+    HDSDP_CALL(HLpSolverInit(lpsolve, nRow, nCol));
+    HDSDP_CALL(HLpSolverSetData(lpsolve, Aeqp, Aeqi, Aeqx, AeqTransp, AeqTransi, AeqTransx, rowRhs, colObj));
+    lpsolve->params.iPrimalMethod = 0;
+    retcode = HLpSolverOptimize(lpsolve);
+    
+    if ( HLpSolverGetStatus(lpsolve) == HDSDP_UNKNOWN ) {
+        goto exit_cleanup;
+    }
+    
+    HLpSolverDestroy(&lpsolve);
+    
+    for ( int iTest = 0; iTest < nTest; ++iTest ) {
+        
+        /* Primal-dual solve */
+        if ( iPrimalDualStatus == HDSDP_UNKNOWN || iPrimalDualStatus == HDSDP_PRIMAL_DUAL_OPTIMAL ) {
+            
+            HDSDP_CALL(HLpSolverCreate(&lpsolve));
+            HDSDP_CALL(HLpSolverInit(lpsolve, nRow, nCol));
+            HDSDP_CALL(HLpSolverSetData(lpsolve, Aeqp, Aeqi, Aeqx, AeqTransp, AeqTransi, AeqTransx, rowRhs, colObj));
+            dTimeStart = HUtilGetTimeStamp();
+            lpsolve->params.iPrimalMethod = 0;
+            retcode = HLpSolverOptimize(lpsolve);
+            dPrimalDualTime += HUtilGetTimeStamp() - dTimeStart;
+            iPrimalDualStatus = HLpSolverGetStatus(lpsolve);
+            
+            if ( iPrimalDualStatus == HDSDP_UNKNOWN ) {
+                break;
+            }
+            
+            HLpSolverDestroy(&lpsolve);
+        }
+        
+        /* Primal-solve */
+        if ( iPrimalStatus == HDSDP_UNKNOWN || iPrimalStatus == HDSDP_PRIMAL_DUAL_OPTIMAL ) {
+            
+            HDSDP_CALL(HLpSolverCreate(&lpsolve));
+            HDSDP_CALL(HLpSolverInit(lpsolve, nRow, nCol));
+            HDSDP_CALL(HLpSolverSetData(lpsolve, Aeqp, Aeqi, Aeqx, AeqTransp, AeqTransi, AeqTransx, rowRhs, colObj));
+            dTimeStart = HUtilGetTimeStamp();
+            lpsolve->params.iPrimalMethod = 1;
+            retcode = HLpSolverOptimize(lpsolve);
+            dPrimalTime += HUtilGetTimeStamp() - dTimeStart;
+            iPrimalStatus = HLpSolverGetStatus(lpsolve);
+            
+            if ( lpsolve->params.LpMethod == LP_ITER_PRIMAL ) {
+                isPrimalUsed = 1;
+            }
+            HLpSolverDestroy(&lpsolve);
+            if ( iPrimalStatus == HDSDP_UNKNOWN ) {
+                break;
+            }
+            
+        }
+        
+        if ( iPrimalStatus != HDSDP_PRIMAL_DUAL_OPTIMAL || iPrimalDualStatus != HDSDP_PRIMAL_DUAL_OPTIMAL ) {
+            iSuccess = 0;
+        }
+        
+        if ( iPrimalStatus != HDSDP_PRIMAL_DUAL_OPTIMAL && iPrimalDualStatus != HDSDP_PRIMAL_DUAL_OPTIMAL ) {
+            break;
+        }
+        
+        if ( !isPrimalUsed ) {
+            break;
+        }
+        
+    }
+    
+    get_sol_status(iPrimalStatus, sPrimalStatus);
+    get_sol_status(iPrimalDualStatus, sPrimalDualStatus);
+    
+    /* Get summary */
+    printf("\nTest summary\n");
+    if ( iSuccess ) {
+        printf("> Test result: Success \n");
+    } else {
+        printf("> Test result: Failed \n");
+    }
+    
+    /* Print Primal-dual status */
+    printf("> Primal dual status: %s \n", sPrimalDualStatus);
+    
+    if ( isPrimalUsed ) {
+        printf("> Primal      status: %s \n", sPrimalStatus);
+        /* Print speed ratio */
+        if ( iSuccess ) {
+            printf("> Primal speedup %f \n", (dPrimalDualTime - dPrimalTime) / dPrimalDualTime);
+        }
+    } else {
+        printf("> Primal      status: %s \n", "Unused");
+    }
+    
+exit_cleanup:
+    
+    HLpSolverDestroy(&lpsolve);
+    
+    HDSDP_FREE(Aineqp);
+    HDSDP_FREE(Aineqi);
+    HDSDP_FREE(Aineqx);
+    
+    HDSDP_FREE(Aeqp);
+    HDSDP_FREE(Aeqi);
+    HDSDP_FREE(Aeqx);
+    
+    HDSDP_FREE(AeqTransp);
+    HDSDP_FREE(AeqTransi);
+    HDSDP_FREE(AeqTransx);
+    HDSDP_FREE(iTransBuffer);
+    
+    HDSDP_FREE(colUbIdx);
+    HDSDP_FREE(colUbElem);
+    
+    HDSDP_FREE(colObj);
+    HDSDP_FREE(rowRhs);
+    
+    return (int) retcode;
+    
 }

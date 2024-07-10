@@ -458,6 +458,10 @@ static int HLpSolverIComputeSolutionStats( hdsdp_lpsolver *HLp, int iIter ) {
     double dCompl = dot(&HLp->nCol, HLp->dColVal, &HIntConstantOne, HLp->dColDual, &HIntConstantOne);
     dCompl = dCompl / HLp->nCol;
     
+    if ( dCompl < 1e-05 && fabs(HLp->pObjVal) < 1e-05 ) {
+        HLp->params.dBarrierLowerBndCoeff = 1e-05;
+    }
+    
     if ( (HLp->dPrimalDualGapRel <= HLp->params.dRelOptTol)  &&
          (HLp->dPrimalInfeasRel  <= HLp->params.dRelFeasTol) &&
          (HLp->dDualInfeasRel    <= HLp->params.dRelFeasTol) &&
@@ -1328,8 +1332,9 @@ extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp ) {
                  HLp->lpstats.dAMatAbsNorm, HLp->lpstats.dRhsOneNorm, HLp->lpstats.dObjOneNorm, HLp->lpstats.nAMatNz);
     
     HLpSolverIComputeSolutionStats(HLp, 0);
+    int nIter = 0;
     
-    for ( int nIter = 1; nIter <= nMaxIter; ++nIter ) {
+    for ( ; nIter <= nMaxIter; ++nIter ) {
         
         if ( HLp->params.LpMethod == LP_ITER_PRIMAL ) {
             retcode = HLpSolverITakePrimalStep(HLp);
@@ -1368,11 +1373,20 @@ extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp ) {
         }
     }
     
+    if ( nIter >= nMaxIter ) {
+        HLp->LpStatus = HDSDP_MAXITER;
+    }
+    
 exit_cleanup:
     
     HDSDPIPrintSolutionStats(HLp);
     
     return retcode;
+}
+
+extern hdsdp_status HLpSolverGetStatus( hdsdp_lpsolver *HLp ) {
+    
+    return HLp->LpStatus;
 }
 
 extern void HLpSolverClear( hdsdp_lpsolver *HLp ) {
