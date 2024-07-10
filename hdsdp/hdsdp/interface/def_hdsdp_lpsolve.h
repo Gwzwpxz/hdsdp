@@ -48,7 +48,7 @@ typedef struct {
     /* Threshold of scaling matrix check */
     double dScalingThreshTol;
     /* Lower bound of barrier parameter*/
-    double dBarrierLowerBnd;
+    double dBarrierLowerBndCoeff;
     
     /* Solution time */
     double dTimeLimit;

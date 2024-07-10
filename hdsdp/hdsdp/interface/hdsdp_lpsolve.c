@@ -199,12 +199,12 @@ static hdsdp_lpsolver_params HLpSolverIGetDefaultParams(void) {
     params.dKKTPrimalReg = 1e-14;
     params.dKKTDualReg = 1e-12;
     
-    params.dPotentialRho = 2.0;
+    params.dPotentialRho = 100.0;
     params.dPrimalUpdateStep = 0.995;
     params.dDualUpdateStep = 0.995;
     params.dIterativeTol = 1e-12;
     params.dScalingThreshTol = 1e-04;
-    params.dBarrierLowerBnd = 1e-16;
+    params.dBarrierLowerBndCoeff = 1e-03;
     params.dTimeLimit = 3600.0;
     
     params.nThreads = 8;
@@ -213,7 +213,7 @@ static hdsdp_lpsolver_params HLpSolverIGetDefaultParams(void) {
     
     params.iStartMethod = MEHROTRA_START;
     params.iScalMethod = SCAL_GEOMETRIC;
-    params.iPrimalMethod = 1;
+    params.iPrimalMethod = 0;
     
     params.LpMethod = LP_ITER_MEHROTRA;
     
@@ -271,6 +271,7 @@ static void HLpSolverICollectLpStats( hdsdp_lpsolver *HLp ) {
     /* Adjust solver parameters */
     if ( HLp->lpstats.isNoObj ) {
         HLp->params.dScalingThreshTol = 1e-03 / sqrt(HLp->nCol);
+        HLp->params.dBarrierLowerBndCoeff = 1e-05;
     }
     
     return;
@@ -333,6 +334,13 @@ static hdsdp_retcode HLpSolverIComputeMehrotraStartingPoint( hdsdp_lpsolver *HLp
     HDSDP_MEMCPY(HLp->dColDual, HLp->dColObj, double, HLp->nCol);
     csp_ATxpy(HLp->nCol, HLp->colMatBeg, HLp->colMatIdx, HLp->colMatElem, -1.0, HLp->dRowDual, HLp->dColDual);
     
+    double dsNorm = nrm1(&HLp->nCol, HLp->dColDual, &HIntConstantOne);
+    if ( dsNorm < 1e-08 ) {
+        for ( int iElem = 0; iElem < HLp->nCol; ++iElem ) {
+            HLp->dColDual[iElem] += 1.0;
+        }
+    }
+    
     /* Compute coordinate shift */
     int iXmin = idmin(&HLp->nCol, HLp->dColVal, &HIntConstantOne);
     int iSmin = idmin(&HLp->nCol, HLp->dColDual, &HIntConstantOne);
@@ -360,6 +368,9 @@ static hdsdp_retcode HLpSolverIComputeMehrotraStartingPoint( hdsdp_lpsolver *HLp
         HLp->dColVal[iCol] += dDeltaXC;
         HLp->dColDual[iCol] += dDeltaSC;
     }
+    
+    HLp->dBarrierMu = dot(&HLp->nCol, HLp->dColVal, &HIntConstantOne, HLp->dColDual, &HIntConstantOne);
+    HLp->dBarrierMu = HLp->dBarrierMu / HLp->nCol;
 
 exit_cleanup:
     return retcode;
@@ -375,6 +386,7 @@ static hdsdp_retcode HLpSolverIComputeStartingPoint( hdsdp_lpsolver *HLp, int iS
             HLp->dColVal[iCol] = 1e+02;
             HLp->dColDual[iCol] = 1e+02;
         }
+        HLp->dBarrierMu = 1e+02;
     } else {
         /* Compute Mehrotra starting point */
         HDSDP_CALL(HLpSolverIComputeMehrotraStartingPoint(HLp));
@@ -443,8 +455,8 @@ static int HLpSolverIComputeSolutionStats( hdsdp_lpsolver *HLp, int iIter ) {
     HLp->dPrimalDualGapRel = fabs(HLp->pObjVal - HLp->dObjVal) / (fabs(HLp->pObjVal) + fabs(HLp->dObjVal) + 1.0);
     
     /* Compute current barrier parameter */
-    HLp->dBarrierMu = dot(&HLp->nCol, HLp->dColVal, &HIntConstantOne, HLp->dColDual, &HIntConstantOne);
-    HLp->dBarrierMu = HLp->dBarrierMu / HLp->nCol;
+    double dCompl = dot(&HLp->nCol, HLp->dColVal, &HIntConstantOne, HLp->dColDual, &HIntConstantOne);
+    dCompl = dCompl / HLp->nCol;
     
     if ( (HLp->dPrimalDualGapRel <= HLp->params.dRelOptTol)  &&
          (HLp->dPrimalInfeasRel  <= HLp->params.dRelFeasTol) &&
@@ -458,13 +470,11 @@ static int HLpSolverIComputeSolutionStats( hdsdp_lpsolver *HLp, int iIter ) {
     
     /* Logging */
 #ifdef HDSDP_PIPMMETRIC_DEBUG
-    hdsdp_printf("    %5d  %+15.8e  %+15.8e  %8.2e  %8.2e  %8.2e  %5.2f %5.2f  %4.1f  | F/S: %5.1f"
-                 " Cond: %6.1e | L2: %6.1e | Scl: %6.1e | SL2: %6.1e | Agg: %6.1e Sup [%d] \n",
-                 iIter, HLp->pObjVal, HLp->dObjVal, HLp->dPrimalInfeasRel, HLp->dDualInfeasRel, HLp->dBarrierMu,
-                 HLp->pStep, HLp->dStep, HUtilGetTimeStamp() - HLp->dTStart, HLpKKTGetFactorSolveTimeRatio(HLp->Hkkt),
-                 HLp->pstats->dCondNumberEst, HLp->pstats->dIterDiffMetric,
-                 HLp->pstats->dIterDiffMetricScal, HLp->pstats->dIterDiffMetricThresh, HLp->pstats->dIterDiffMetricAggressive,
-                 HLp->pstats->isSuperLin);
+    hdsdp_printf("    %5d  %+15.8e  %+15.8e  %8.2e  %8.2e  %8.2e  %5.2f %5.2f  %4.1f  | B: %8.2e | P: %5.1e | F/S: %5.1f"
+                 " Cond: %6.1e | L2: %6.1e | SL2: %6.1e | Agg: %6.1e [%d] \n", iIter, HLp->pObjVal, HLp->dObjVal, HLp->dPrimalInfeasRel,
+                 HLp->dDualInfeasRel, dCompl, HLp->pStep, HLp->dStep, HUtilGetTimeStamp() - HLp->dTStart, HLp->dBarrierMu,
+                 HLp->dProxNorm, HLpKKTGetFactorSolveTimeRatio(HLp->Hkkt), HLp->pstats->dCondNumberEst, HLp->pstats->dIterDiffMetric,
+                 HLp->pstats->dIterDiffMetricThresh, HLp->pstats->dIterDiffMetricAggressive, HLp->pstats->isSuperLin);
 #else
     hdsdp_printf("    %5d  %+15.8e  %+15.8e  %8.2e  %8.2e  %5.2f %5.2f  %4.1f \n",
                  iIter, HLp->pObjVal, HLp->dObjVal, HLp->dPrimalInfeasRel, HLp->dDualInfeasRel,
@@ -474,7 +484,7 @@ static int HLpSolverIComputeSolutionStats( hdsdp_lpsolver *HLp, int iIter ) {
     return goOn;
 }
 
-static int HLpSolverICheckPrimalStats( hdsdp_lpsolver *HLp, int iIter, double dAdaTol ) {
+static int HLpSolverICheckPrimalStats( hdsdp_lpsolver *HLp, int iIter) {
     
     int iPrimalStart = 0;
     
@@ -497,10 +507,13 @@ static int HLpSolverICheckPrimalStats( hdsdp_lpsolver *HLp, int iIter, double dA
     int iPrimalStartCond2 = 0;
     
     iPrimalStartCond1 = HLp->params.iPrimalMethod && (HLp->params.LpMethod != LP_ITER_PRIMAL);
-    iPrimalStartCond2 = (dCondUbEst < 100.0 || dEuclideanDist < dAdaTol) && \
+    iPrimalStartCond2 = (dCondUbEst < 100.0 || dEuclideanDist < 1e-05) && \
                         (HLp->dPrimalDualGapRel < 1e-03 && HLp->dPrimalDualGapRel > HLp->params.dRelOptTol * 1e+02);
     
-    if ( iPrimalStartCond1 && iPrimalStartCond2 && !HLp->pstats->isSuperLin ) {
+    /* Relaxed condition for debugging */
+//    iPrimalStartCond2 = (dCondUbEst < 100.0 || dEuclideanDist < dAdaTol);
+    
+    if ( iPrimalStartCond1 && iPrimalStartCond2 ) {// && !HLp->pstats->isSuperLin ) {
         iPrimalStart = 1;
     }
     
@@ -598,6 +611,8 @@ static hdsdp_retcode HLpSolverITakePrimalDualStep( hdsdp_lpsolver *HLp ) {
     dBarrierAffine = dBarrierAffine / HLp->nCol;
     dBarrierTarget = (dBarrierAffine / HLp->dBarrierMu);
     dBarrierTarget = HLp->dBarrierMu * dBarrierTarget * dBarrierTarget * dBarrierTarget;
+    double dBarrierLowerBnd = HLp->params.dRelFeasTol * HLp->params.dBarrierLowerBndCoeff;
+    dBarrierTarget = HDSDP_MAX(dBarrierTarget, dBarrierLowerBnd);
     HLp->dBarrierMu = HDSDP_MIN(dBarrierTarget, HLp->dBarrierMu);
     
     /* Corrector step */
@@ -647,6 +662,10 @@ static hdsdp_retcode HLpSolverITakePrimalDualStep( hdsdp_lpsolver *HLp ) {
     axpy(&HLp->nCol, &HLp->dStep, HLp->dColDualDirection, &HIntConstantOne, HLp->dColDual, &HIntConstantOne);
     axpy(&HLp->nRow, &HLp->dStep, HLp->dRowDualDirection, &HIntConstantOne, HLp->dRowDual, &HIntConstantOne);
     
+    HLp->dBarrierMu = dot(&HLp->nCol, HLp->dColVal, &HIntConstantOne, HLp->dColDual, &HIntConstantOne);
+    HLp->dBarrierMu = HLp->dBarrierMu / HLp->nCol;
+    HLp->dBarrierMu = HDSDP_MAX(HLp->dBarrierMu, dBarrierLowerBnd);
+    
 exit_cleanup:
     return retcode;
 }
@@ -655,6 +674,16 @@ static hdsdp_retcode HLpSolverIPreparePrimal( hdsdp_lpsolver *HLp ) {
     /* Prepare the factorization in primal IPM */
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
     
+    /* Overwrite with debug data */
+    
+#if 0
+#include "debug_data_lp.h"
+    assert( ndbgCol == HLp->nCol && ndbgRow == HLp->nRow );
+    HDSDP_MEMCPY(HLp->dColVal, dbgColVal, double, ndbgCol);
+    HDSDP_MEMCPY(HLp->dRowDual, dbgRowDual, double, ndbgRow);
+    HDSDP_MEMCPY(HLp->dColDual, dbgColDual, double, ndbgCol);
+    HLp->dBarrierMu = dbgBarrierParam;
+#endif
     /* Decide the scaling matrix */
     double *dScalingMatrix = HLp->dScalingMatrix;
     HDSDP_MEMCPY(dScalingMatrix, HLp->dColVal, double, HLp->nCol);
@@ -687,9 +716,7 @@ static double HLpSolverIExtrapolatePotentialParam( hdsdp_lpsolver *HLp ) {
     double dPotentialRho = HLp->params.dPotentialRho;
     int iIter = HLp->pstats->iIterLast;
     
-    if ( HLp->pstats->isSuperLin ) {
-        dPotentialRho = HDSDP_MAX(dPotentialRho, HLp->pstats->dPrimalMuHistory[iIter - 1] / HLp->pstats->dPrimalMuHistory[iIter]);
-    }
+    dPotentialRho = HDSDP_MAX(dPotentialRho, HLp->pstats->dPrimalMuHistory[iIter - 1] / HLp->pstats->dPrimalMuHistory[iIter]);
     
     return dPotentialRho;
 }
@@ -703,9 +730,13 @@ static void HLpSolverIMatVec( hdsdp_lpsolver *HLp, double dXCoeff, double *dXVec
         HDSDP_ZERO(HLp->dKrylovAuxVec6, double, HLp->nCol);
         csp_ATxpy(HLp->nCol, HLp->colMatBeg, HLp->colMatIdx, HLp->colMatElem, 1.0, dXVec, HLp->dKrylovAuxVec6);
         for ( int iElem = 0; iElem < HLp->nCol; ++iElem ) {
-            HLp->dKrylovAuxVec6[iElem] *= (HLp->dColVal[iElem] * HLp->dColVal[iElem]);
+            HLp->dKrylovAuxVec6[iElem] *= HLp->dAuxiColVector4[iElem];
         }
         csp_Axpy(HLp->nCol, HLp->colMatBeg, HLp->colMatIdx, HLp->colMatElem, dXCoeff, HLp->dKrylovAuxVec6, dYVec);
+    }
+    
+    for ( int iElem = 0; iElem < HLp->nRow; ++iElem ) {
+        dYVec[iElem] += HLp->params.dKKTDualReg * dXVec[iElem];
     }
     
     return;
@@ -713,16 +744,12 @@ static void HLpSolverIMatVec( hdsdp_lpsolver *HLp, double dXCoeff, double *dXVec
 
 static int HLpSolverITestIterativeDir( hdsdp_lpsolver *HLp, double *dRowDualDirection ) {
     
-    /* Test current inexact solution */
-    /* Scaling matrix of the factorized normal matrix */
-    double *dScalingMatrix = HLp->dScalingMatrix;
     /* Shifted scaling matrix */
     double *dShiftedScalingMatrix = HLp->dAuxiColVector1;
     /* Shifted scaling error matrix */
     double *dErrScalMatrix = HLp->dAuxiColVector2;
     double *dColTmp = HLp->dAuxiColVector3;
     double *dShiftedScalingMatrixSqr = HLp->dAuxiColVector4;
-    double *dNormalEqnRhsTmp = HLp->dAuxiRowVector1;
     double *dTrialRowDualDirection = HLp->dAuxiRowVector2;
     double *dTrialPrimalInfeasVec = HLp->dPrimalInfeasVec;
     double dTrialPrimalInfeas = 0.0;
@@ -732,7 +759,7 @@ static int HLpSolverITestIterativeDir( hdsdp_lpsolver *HLp, double *dRowDualDire
     HDSDP_MEMCPY(dTrialRowDualDirection, dRowDualDirection, double, HLp->nRow);
     
     /* Get dy */
-    scal(&HLp->nCol, &HLp->dBarrierMu, dTrialRowDualDirection, &HIntConstantOne);
+    scal(&HLp->nRow, &HLp->dBarrierMu, dTrialRowDualDirection, &HIntConstantOne);
     
     /* Get ds = -rd - A' * dy */
     HDSDP_ZERO(HLp->dColDualDirection, double, HLp->nCol);
@@ -750,6 +777,7 @@ static int HLpSolverITestIterativeDir( hdsdp_lpsolver *HLp, double *dRowDualDire
     HLpSolverIRatioTest(HLp, &HLp->pStep, &HLp->dStep);
     
     if ( HLp->pStep < 1e-04 ) {
+        hdsdp_printf("=> Iterative test ends with tiny stepsize \n");
         return 0;
     }
     
@@ -761,13 +789,16 @@ static int HLpSolverITestIterativeDir( hdsdp_lpsolver *HLp, double *dRowDualDire
     
     for ( int iRow = 0; iRow < HLp->nRow; ++iRow ) {
         double dScaledInfeas = dTrialPrimalInfeasVec[iRow] * HLp->dRowScal[iRow];
-        dTrialPrimalInfeas +=  dScaledInfeas * dScaledInfeas;
+        dTrialPrimalInfeas += dScaledInfeas * dScaledInfeas;
     }
     
     dTrialPrimalInfeas = sqrt(dTrialPrimalInfeas);
     dTrialPrimalInfeasRel = dTrialPrimalInfeas / (HLp->lpstats.dRhsTwoNorm + 1.0);
     
-    if ( dTrialPrimalInfeasRel > HLp->dPrimalInfeasRel && dTrialPrimalInfeas > HLp->params.dRelOptTol ) {
+//    hdsdp_printf("=> Iterative test: pStep %5.2f dStep %5.2f pInf: %5.1e \n",
+//                 HLp->pStep, HLp->dStep, dTrialPrimalInfeasRel);
+    
+    if ( dTrialPrimalInfeasRel > HLp->dPrimalInfeasRel && dTrialPrimalInfeasRel > HLp->params.dRelOptTol ) {
         return 0;
     }
     
@@ -815,6 +846,7 @@ static hdsdp_retcode HLpSolverIConjGrad( hdsdp_lpsolver *HLp, int nMaxIter, doub
     
     /* Initial guess */
     HDSDP_CALL(HLpKKTSolveNormalEqn(HLp->Hkkt, 1, rhsVec, iterVec));
+    
     HDSDP_MEMCPY(iterResi, rhsVec, double, nCol);
     HLpSolverIMatVec(HLp, -1.0, iterVec, iterResi);
     
@@ -822,7 +854,7 @@ static hdsdp_retcode HLpSolverIConjGrad( hdsdp_lpsolver *HLp, int nMaxIter, doub
     
     iPassTest = HLpSolverITestIterativeDir(HLp, iterVec);
     
-    if ( resiNorm < dTol || iPassTest ) {
+    if ( resiNorm < dTol ) {
         goto exit_cleanup;
     }
     
@@ -841,7 +873,7 @@ static hdsdp_retcode HLpSolverIConjGrad( hdsdp_lpsolver *HLp, int nMaxIter, doub
         axpy(&nCol, &alpha, iterDirection, &HIntConstantOne, iterVec, &HIntConstantOne);
         
         HDSDP_MEMCPY(iterResiNew, iterResi, double, nCol);
-        double minusAlpha = -alpha;
+        double minusAlpha = - alpha;
         
         axpy(&nCol, &minusAlpha, MTimesDirection, &HIntConstantOne, iterResiNew, &HIntConstantOne);
         HDSDP_MEMCPY(preInvResi, iterResiNew, double, nCol);
@@ -851,9 +883,16 @@ static hdsdp_retcode HLpSolverIConjGrad( hdsdp_lpsolver *HLp, int nMaxIter, doub
         axpby(&nCol, &HDblConstantOne, preInvResi, &HIntConstantOne, &beta, iterDirection, &HIntConstantOne);
         HDSDP_ZERO(MTimesDirection, double, nCol);
         HLpSolverIMatVec(HLp, 1.0, iterDirection, MTimesDirection);
-        HDSDP_MEMCPY(iterResi, iterResiNew, double, nCol);
+        
+        // HDSDP_MEMCPY(iterResi, iterResiNew, double, nCol);
+        HDSDP_MEMCPY(iterResi, rhsVec, double, nCol);
+        HLpSolverIMatVec(HLp, -1.0, iterVec, iterResi);
         resiNorm = nrm2(&nCol, iterResi, &HIntConstantOne);
         iPassTest = HLpSolverITestIterativeDir(HLp, iterVec);
+        
+#ifdef HDSDP_CONJGRAD_DEBUG
+        hdsdp_printf("CG Iteration: %d %6.2e \n", iter, resiNorm);
+#endif
         
         if ( resiNorm != resiNorm ) {
             hdsdp_printf("Iterative solver failed \n");
@@ -861,7 +900,7 @@ static hdsdp_retcode HLpSolverIConjGrad( hdsdp_lpsolver *HLp, int nMaxIter, doub
             goto exit_cleanup;
         }
         
-        if ( resiNorm < dTol || iPassTest ) {
+        if ( resiNorm < dTol ) {
             break;
         }
     }
@@ -880,11 +919,11 @@ static hdsdp_retcode HLpSolverIIterativeSolve( hdsdp_lpsolver *HLp, double *dRhs
     
     /* Determine maximum iterations based on solution statistics */
     if ( dFactorSolveRatio < 50 ) {
-        nKrylovIter = 10;
+        nKrylovIter = 2;
     } else if ( dFactorSolveRatio < 100 ) {
-        nKrylovIter = 15;
+        nKrylovIter = 3;
     } else {
-        nKrylovIter = 20;
+        nKrylovIter = 5;
     }
     
     double dIterativeTol = HLp->params.dIterativeTol;
@@ -912,10 +951,6 @@ static hdsdp_retcode HLpSolverITakePrimalStep( hdsdp_lpsolver *HLp ) {
     double *dShiftedScalingMatrixSqr = HLp->dAuxiColVector4;
     double *dNormalEqnRhsTmp = HLp->dAuxiRowVector1;
     
-    
-    hdsdp_printf("Warning: Remove this after debug \n");
-    dShiftedThreshTol = 100.0;
-    
     /* Compute shifted scaling matrix */
     for ( int iElem = 0; iElem < HLp->nCol; ++iElem ) {
         if ( HLp->dColVal[iElem] < dShiftedThreshTol ) {
@@ -936,7 +971,7 @@ static hdsdp_retcode HLpSolverITakePrimalStep( hdsdp_lpsolver *HLp ) {
     for ( int iElem = 0; iElem < HLp->nCol; ++iElem ) {
         dColTmp[iElem] = (dShiftedScalingMatrix[iElem] * HLp->dColDual[iElem]) / HLp->dBarrierMu \
                           - dErrScalMatrix[iElem];
-        dColTmp[iElem] = dColTmp[iElem] * HLp->dScalingMatrix[iElem];
+        dColTmp[iElem] = dColTmp[iElem] * dShiftedScalingMatrix[iElem];
     }
     csp_Axpy(HLp->nCol, HLp->colMatBeg, HLp->colMatIdx, HLp->colMatElem, 1.0, dColTmp, dNormalEqnRhsTmp);
     
@@ -957,7 +992,7 @@ static hdsdp_retcode HLpSolverITakePrimalStep( hdsdp_lpsolver *HLp ) {
     HDSDP_CALL(HLpSolverIIterativeSolve(HLp, dNormalEqnRhsTmp, HLp->dRowDualDirection));
     
     /* Recover other directions */
-    scal(&HLp->nCol, &HLp->dBarrierMu, HLp->dRowDualDirection, &HIntConstantOne);
+    scal(&HLp->nRow, &HLp->dBarrierMu, HLp->dRowDualDirection, &HIntConstantOne);
     HDSDP_ZERO(HLp->dColDualDirection, double, HLp->nCol);
     csp_ATxpy(HLp->nCol, HLp->colMatBeg, HLp->colMatIdx, HLp->colMatElem,
               -1.0, HLp->dRowDualDirection, HLp->dColDualDirection);
@@ -995,6 +1030,19 @@ static hdsdp_retcode HLpSolverITakePrimalStep( hdsdp_lpsolver *HLp ) {
     double dComplGap = 0.0;
     double dXiSi = 0.0;
     
+    /* Compute next barrier parameter */
+    if ( isDualFeas ) {
+        HDSDP_MEMCPY(HLp->dColDual, dColTmp, double, HLp->nCol);
+        dBarrierTarget = dot(&HLp->nCol, HLp->dColVal, &HIntConstantOne, HLp->dColDual, &HIntConstantOne);
+        dBarrierTarget = dBarrierTarget / dPotentialRho;
+        dBarrierTarget = HDSDP_MIN(dBarrierTarget, HLp->dBarrierMu);
+    } else {
+        double dBarrierStep = HDSDP_MIN(HLp->pStep, HLp->dStep);
+        dBarrierStep = HDSDP_MIN(dBarrierStep, 0.6);
+        dBarrierTarget = HLp->dBarrierMu * (1.0 - dBarrierStep);
+    }
+    
+    /* Compute the complementarity measure */
     for ( int iElem = 0; iElem < HLp->nCol; ++iElem ) {
         dXiSi = HLp->dColVal[iElem] * HLp->dColDual[iElem];
         HLp->dComplVec[iElem] = dXiSi;
@@ -1003,19 +1051,9 @@ static hdsdp_retcode HLpSolverITakePrimalStep( hdsdp_lpsolver *HLp ) {
     
     dComplGap = dComplGap / HLp->nCol;
     
-    /* Compute next barrier parameter */
-    if ( isDualFeas ) {
-        HDSDP_MEMCPY(HLp->dColDual, dColTmp, double, HLp->nCol);
-        dBarrierTarget = dot(&HLp->nCol, HLp->dColVal, &HIntConstantOne, HLp->dColDual, &HIntConstantOne);
-        dBarrierTarget = dComplGap / dPotentialRho;
-    } else {
-        double dBarrierStep = HDSDP_MIN(HLp->pStep, HLp->dStep);
-        dBarrierStep = HDSDP_MIN(dBarrierStep, 0.6);
-        dBarrierTarget = HLp->dBarrierMu * (1.0 - dBarrierStep);
-        dBarrierLowerBnd = dot(&HLp->nCol, HLp->dColVal, &HIntConstantOne, HLp->dColDual, &HIntConstantOne);
-        dBarrierLowerBnd = dComplGap / 10.0;
-        dBarrierTarget = HDSDP_MAX(dBarrierTarget, dBarrierLowerBnd);
-    }
+    /* Threshold barrier parameter */
+    dBarrierLowerBnd = dComplGap / 10.0;
+    dBarrierTarget = HDSDP_MAX(dBarrierTarget, dBarrierLowerBnd);
     
     /* Compute the proximity measure */
     HLp->dProxNorm = 0.0;
@@ -1034,7 +1072,7 @@ static hdsdp_retcode HLpSolverITakePrimalStep( hdsdp_lpsolver *HLp ) {
         dBarrierTarget = HDSDP_MIN(HLp->dBarrierMu, dComplGap);
     }
     
-    dBarrierLowerBnd = HDSDP_MAX(dBarrierLowerBnd, HLp->params.dRelFeasTol * 1e-05);
+    dBarrierLowerBnd = HLp->params.dRelFeasTol * HLp->params.dBarrierLowerBndCoeff;
     HLp->dBarrierMu = HDSDP_MAX(dBarrierTarget, dBarrierLowerBnd);
     
 exit_cleanup:
@@ -1284,15 +1322,12 @@ extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp ) {
     int nMaxIter = HLp->params.nMaxIter;
     int goOn = 0;
     int iPrimalStart = 0;
-    double dAdaTol = 1e-05;
     
     hdsdp_printf("Opimizing an LP of %d variables and %d constraints\n", HLp->nCol, HLp->nRow);
     hdsdp_printf("Data statistics: |A| = %5.2e |b| = %5.2e |c| = %5.2e Nnz = %d \n",
                  HLp->lpstats.dAMatAbsNorm, HLp->lpstats.dRhsOneNorm, HLp->lpstats.dObjOneNorm, HLp->lpstats.nAMatNz);
     
     HLpSolverIComputeSolutionStats(HLp, 0);
-    
-    HDSDP_CALL(HLpSolverIPreparePrimal(HLp));
     
     for ( int nIter = 1; nIter <= nMaxIter; ++nIter ) {
         
@@ -1324,7 +1359,7 @@ extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp ) {
             break;
         }
         
-        iPrimalStart = HLpSolverICheckPrimalStats(HLp, nIter, dAdaTol);
+        iPrimalStart = HLpSolverICheckPrimalStats(HLp, nIter);
         
         if ( iPrimalStart ) {
             hdsdp_printf("Primal interior point method starts \n");
