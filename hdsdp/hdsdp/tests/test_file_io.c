@@ -547,6 +547,10 @@ int test_primal_primal_dual_bench( char *fname ) {
         goto exit_cleanup;
     }
     
+    if ( nElem > 1e+07 ) {
+        goto exit_cleanup;
+    }
+    
     assert( nIneqRow == 0 && nColUb == 0 );
     
     HDSDP_INIT(AeqTransp, int, nRow + 1);

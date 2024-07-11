@@ -194,7 +194,7 @@ static hdsdp_lpsolver_params HLpSolverIGetDefaultParams(void) {
     params.dAbsOptTol = 1.0;
     params.dAbsFeasTol = 1.0;
     params.dRelOptTol = 1e-10;
-    params.dRelFeasTol = 1e-12;
+    params.dRelFeasTol = 1e-10;
     
     params.dKKTPrimalReg = 1e-14;
     params.dKKTDualReg = 1e-12;
