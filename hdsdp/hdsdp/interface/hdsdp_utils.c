@@ -418,6 +418,13 @@ extern double HUtilPrintDblAbsSum( int n, double *d ) {
     return ds;
 }
 
+extern void HUtilTraceBack( void ) {
+    
+    hdsdp_printf("Error Traceback \n");
+    
+    return;
+}
+
 /* Sorting */
 extern int HUtilCheckIfAscending( int n, int *idx ) {
     /* Check is an integer array is ascending. */

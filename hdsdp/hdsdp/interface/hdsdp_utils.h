@@ -40,6 +40,7 @@
 #define HDSDP_ERROR_TRACE printf("File [%30s] Line [%d]\n", __FILE__, __LINE__)
 #define HDSDP_CALL(func) retcode = (func);                      \
                          if (retcode != HDSDP_RETCODE_OK) {     \
+                             HUtilTraceBack();                 \
                              goto exit_cleanup;                 \
                          }
 #define HDSDP_MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -102,6 +103,7 @@ extern double HUtilGetDblMinimum( int n, double *d );
 extern double HUtilPrintDblSum( int n, double *d );
 extern double HUtilPrintDblAbsSum( int n, double *d );
 extern int HUtilCheckUserInterrupt( void );
+extern void HUtilTraceBack( void );
 
 extern void HUtilStartCtrlCCheck( void );
 extern int HUtilCheckCtrlC( void );

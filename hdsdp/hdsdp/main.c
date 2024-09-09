@@ -13,8 +13,8 @@ int main(int argc, const char * argv[]) {
     if ( argc > 1 ) {
         return test_primal_primal_dual_bench((char *) argv[1]);
     } else {
-        char *fname = "/Users/gaowenzhi/Desktop/potential-reduction/lps/miplib/s_bnatt400.mps";
-        // char *fname = "/Users/gaowenzhi/Desktop/gwz/benchmark/sdplib/mcp100.dat-s";
-        return test_primal_primal_dual_bench(fname);
+//        char *fname = "/Users/gaowenzhi/Desktop/potential-reduction/lps/miplib/s_nexp-150-20-1-5.mps";
+         char *fname = "/Users/gaowenzhi/Desktop/gwz/benchmark/sdplib/mcp100.dat-s";
+        return test_file_io(fname);
     }
 }
