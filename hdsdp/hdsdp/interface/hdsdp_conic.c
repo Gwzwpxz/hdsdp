@@ -86,7 +86,7 @@ extern hdsdp_retcode HConeSetData( hdsdp_cone *HCone, user_data *usrData ) {
             set_func_pointer(HCone->coneSetPerturb, sBoundConeSetPerturb);
             set_func_pointer(HCone->conePRecover, sBoundConeGetPrimal);
             set_func_pointer(HCone->coneDRecover, NULL);
-            set_func_pointer(HCone->coneATimesX, NULL);
+            set_func_pointer(HCone->coneATimesXpy, NULL);
             set_func_pointer(HCone->coneView, sBoundConeViewImpl);
             set_func_pointer(HCone->getstat, NULL);
             break;
@@ -118,7 +118,7 @@ extern hdsdp_retcode HConeSetData( hdsdp_cone *HCone, user_data *usrData ) {
             set_func_pointer(HCone->conePRecover, LPConeGetPrimal);
             set_func_pointer(HCone->coneDRecover, LPConeGetDual);
             set_func_pointer(HCone->coneTraceCX, LPConeTraceCX);
-            set_func_pointer(HCone->coneATimesX, LPConeATimesX);
+            set_func_pointer(HCone->coneATimesXpy, LPConeATimesX);
             set_func_pointer(HCone->coneView, LPConeViewImpl);
             set_func_pointer(HCone->getstat, LPConeGetStatsImpl);
             break;
@@ -150,7 +150,7 @@ extern hdsdp_retcode HConeSetData( hdsdp_cone *HCone, user_data *usrData ) {
             set_func_pointer(HCone->conePRecover, sdpDenseConeGetPrimal);
             set_func_pointer(HCone->coneDRecover, sdpDenseConeGetDual);
             set_func_pointer(HCone->coneTraceCX, sdpDenseConeTraceCX);
-            set_func_pointer(HCone->coneATimesX, sdpDenseConeATimesX);
+            set_func_pointer(HCone->coneATimesXpy, sdpDenseConeATimesX);
             set_func_pointer(HCone->coneView, sdpDenseConeViewImpl);
             set_func_pointer(HCone->getstat, sdpDenseConeFeatureDetectImpl);
             break;
@@ -182,7 +182,7 @@ extern hdsdp_retcode HConeSetData( hdsdp_cone *HCone, user_data *usrData ) {
             set_func_pointer(HCone->conePRecover, sdpSparseConeGetPrimal);
             set_func_pointer(HCone->coneDRecover, sdpSparseConeGetDual);
             set_func_pointer(HCone->coneTraceCX, sdpSparseConeTraceCX);
-            set_func_pointer(HCone->coneATimesX, sdpSparseConeATimesX);
+            set_func_pointer(HCone->coneATimesXpy, sdpSparseConeATimesX);
             set_func_pointer(HCone->coneView, sdpSparseConeViewImpl);
             set_func_pointer(HCone->getstat, sdpSparseConeFeatureDetectImpl);
             break;
@@ -398,9 +398,9 @@ extern void HConeGetDual( hdsdp_cone *HCone, double *dConeDual, double *dConeDua
     return;
 }
 
-extern void HConeComputeATimesX( hdsdp_cone *HCone, double *dConePrimal, double *dATimesX ) {
+extern void HConeComputeATimesXpy( hdsdp_cone *HCone, double *dConePrimal, double *dATimesX ) {
     
-    HCone->coneATimesX(HCone->coneData, dConePrimal, dATimesX);
+    HCone->coneATimesXpy(HCone->coneData, dConePrimal, dATimesX);
     return;
 }
 

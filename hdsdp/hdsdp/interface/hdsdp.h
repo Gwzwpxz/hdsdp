@@ -28,10 +28,6 @@
 #define HDSDP_SPARSE_CONE_THRESHOLD  (0.3)
 #define HDSDP_SPARSE_SCHUR_THRESHOLD (0.3)
 
-#ifndef DUMMY_KKT
-//#define DUMMY_KKT
-#endif
-
 #ifdef MEMORY_DEBUG
 #ifndef MEMWATCH
 #define MEMWATCH
@@ -97,13 +93,13 @@ typedef struct hdsdp_solver_internal hdsdp;
 
 // Version information
 #define VERSION_MAJOR           1
-#define VERSION_MINOR           0
+#define VERSION_MINOR           1
 #define VERSION_TECHNICAL       0
 
 // Build date
-#define BUILD_DATE_YEAR         2023
-#define BUILD_DATE_MONTH        07
-#define BUILD_DATE_DAY          21
+#define BUILD_DATE_YEAR         2024
+#define BUILD_DATE_MONTH        09
+#define BUILD_DATE_DAY          08
 
 #ifdef __cplusplus
 extern "C" {

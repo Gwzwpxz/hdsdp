@@ -31,7 +31,7 @@
    1. Infeasible-start dual interior point method
    2. Dual embedding
    3. Dual potential reduction
-   4. Primal-dual interior point method for linear programs (Todo)
+   4. Primal-dual interior point method for linear programs
    5. Infeasible dual corrector step
    6. Feasible dual corrector step
  
@@ -47,7 +47,7 @@
    solution is needed, the feasible solution is
  
    1. normalized and handed over to dual potential reduction for primal-dual optimality.
-   2. kept in the algorithm that gets it for just dual optimality
+   2. kept in the algorithm that gets it towards just dual optimality
  
  */
 
@@ -92,6 +92,7 @@ static void HDSDP_SetStart( hdsdp *HSolver, int SDPMethod, int dOnly ) {
         
     } else {
         hdsdp_printf("Invalid starting strategy. \n");
+        return;
     }
     
     hdsdp_printf("Initialize with dual residual %3.1e\n", - HSolver->dResidual);
@@ -197,14 +198,14 @@ static int HDSDP_CheckIsInterior( hdsdp *HSolver, double barHsdTau, double *rowD
     int isInterior = 0;
     
     for ( int iCone = 0; iCone < HSolver->nCones; ++iCone ) {
-        HConeCheckIsInterior(HSolver->HCones[iCone], 1.0, rowDual, &isInterior);
+        HConeCheckIsInterior(HSolver->HCones[iCone], barHsdTau, rowDual, &isInterior);
         if ( !isInterior ) {
             return 0;
         }
     }
     
     if ( HSolver->whichMethod != HDSDP_ALGO_DUAL_HSD ) {
-        HConeCheckIsInterior(HSolver->HBndCone, 1.0, rowDual, &isInterior);
+        HConeCheckIsInterior(HSolver->HBndCone, barHsdTau, rowDual, &isInterior);
     }
     
     if ( !isInterior ) {

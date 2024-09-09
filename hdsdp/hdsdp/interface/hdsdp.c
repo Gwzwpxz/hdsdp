@@ -29,7 +29,8 @@
 #include <math.h>
 
 static void HDSDPIGetStatistics( hdsdp *HSolver ) {
-    /* Collect statistics */
+    
+    /* Collect statistics for parameter adjustment */
     hdsdp_printf("  Collecting statistcs \n");
     
     /* Get sum of conic dimensions. Used to convert the identity matrix to Frobenius norm */
@@ -48,6 +49,7 @@ static void HDSDPIGetStatistics( hdsdp *HSolver ) {
     set_int_feature(HSolver, INT_FEATURE_N_ROWS, HSolver->nRows);
     set_int_feature(HSolver, INT_FEATURE_N_CONES, HSolver->nCones);
     
+    /* Total number of dimensions: cones + upper/lower bounds on y */
     HSolver->dAllConeDims = (double) sumConeDims + 2 * HSolver->nRows;
     
     /* Get norms */
@@ -134,6 +136,13 @@ static void HDSDPIAdjustConeParams( hdsdp *HSolver ) {
     /* Detect features when there is one cone */
     int isHit = 0;
     int isOneCone = 1;
+    
+    if ( get_int_feature(HSolver, INT_FEATURE_I_MANYCONES) ) {
+        set_int_param(HSolver, INT_PARAM_CORRECTORA, 6);
+        set_int_param(HSolver, INT_PARAM_CORRECTORB, 0);
+        set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1.0);
+        set_dbl_param(HSolver, DBL_PARAM_POBJSTART, 1e+10);
+    }
     
     if ( get_int_feature(HSolver, INT_FEATURE_N_DSSDPCONES) + \
          get_int_feature(HSolver, INT_FEATURE_N_SPSDPCONES) > 1 ) {
@@ -322,13 +331,13 @@ static void HDSDPIAdjustParams( hdsdp *HSolver ) {
         set_int_param(HSolver, INT_PARAM_THREADS, nMaxThreads);
     }
     
-    /* Determine correctors */
-    int nCorrA = 0;
-    int nCorrB = 0;
-    
     if ( iPreLevel < 1 ) {
         return;
     }
+    
+    /* Determine number of centrality correctors. Set when preprocess level >= 1. */
+    int nCorrA = 0;
+    int nCorrB = 0;
     
     nCorrA = (int) (HSolver->nRows - 2) / get_int_feature(HSolver, INT_FEATURE_N_MAXCONEDIM);
     
@@ -375,18 +384,10 @@ static void HDSDPIAdjustParams( hdsdp *HSolver ) {
     set_int_param(HSolver, INT_PARAM_CORRECTORA, nCorrA);
     set_int_param(HSolver, INT_PARAM_CORRECTORB, nCorrB);
     
-    if ( iPreLevel < 2 ) {
-        return;
+    /* Adjust other cone parameters dependent on the cone features. */
+    if ( iPreLevel >= 2 ) {
+        HDSDPIAdjustConeParams(HSolver);
     }
-    
-    if ( get_int_feature(HSolver, INT_FEATURE_I_MANYCONES) ) {
-        set_int_param(HSolver, INT_PARAM_CORRECTORA, 6);
-        set_int_param(HSolver, INT_PARAM_CORRECTORB, 0);
-        set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1.0);
-        set_dbl_param(HSolver, DBL_PARAM_POBJSTART, 1e+10);
-    }
-    
-    HDSDPIAdjustConeParams(HSolver);
     
     return;
 }
@@ -397,15 +398,17 @@ static void HDSDPIGetDefaultParams( hdsdp *HSolver ) {
     set_int_param(HSolver, INT_PARAM_CORRECTORA, 12);
     set_int_param(HSolver, INT_PARAM_CORRECTORB, 12);
     set_int_param(HSolver, INT_PARAM_THREADS, 12);
+    /* Primal refinement */
     set_int_param(HSolver, INT_PARAM_PSDP, 0);
+    /* Preprocess level */
     set_int_param(HSolver, INT_PARAM_PRELEVEL, 2);
-    
-    set_dbl_param(HSolver, DBL_PARAM_ABSOPTTOL, 1e-04);
-    set_dbl_param(HSolver, DBL_PARAM_ABSFEASTOL, 1e-04);
-    set_dbl_param(HSolver, DBL_PARAM_RELOPTTOL, 5e-06);
-    set_dbl_param(HSolver, DBL_PARAM_RELFEASTOL, 5e-06);
+    set_dbl_param(HSolver, DBL_PARAM_ABSOPTTOL, 1e-08);
+    set_dbl_param(HSolver, DBL_PARAM_ABSFEASTOL, 1e-08);
+    set_dbl_param(HSolver, DBL_PARAM_RELOPTTOL, 1e-08);
+    set_dbl_param(HSolver, DBL_PARAM_RELFEASTOL, 1e-08);
     set_dbl_param(HSolver, DBL_PARAM_TIMELIMIT, 3600.0);
     set_dbl_param(HSolver, DBL_PARAM_POTRHOVAL, 4.0);
+    /* HSD infeasibility reduction ratio */
     set_dbl_param(HSolver, DBL_PARAM_HSDGAMMA, 0.5);
     set_dbl_param(HSolver, DBL_PARAM_DUALBOX_UP, 1e+07);
     set_dbl_param(HSolver, DBL_PARAM_DUALBOX_LOW, -1e+07);
@@ -590,7 +593,11 @@ extern hdsdp_retcode HDSDPSetCone( hdsdp *HSolver, int iCone, void *userCone ) {
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
     
-    HDSDP_CALL(HConeSetData(HSolver->HCones[iCone], userCone));
+    if ( userCone ) {
+        HDSDP_CALL(HConeSetData(HSolver->HCones[iCone], userCone));
+    } else {
+        retcode = HDSDP_RETCODE_FAILED;
+    }
     
 exit_cleanup:
     return retcode;
@@ -598,7 +605,9 @@ exit_cleanup:
 
 extern void HDSDPSetDualObjective( hdsdp *HSolver, double *dObj ) {
     
-    HDSDP_MEMCPY(HSolver->rowRHS, dObj, double, HSolver->nRows);
+    if ( dObj ) {
+        HDSDP_MEMCPY(HSolver->rowRHS, dObj, double, HSolver->nRows);
+    }
     
     return;
 }
@@ -639,13 +648,9 @@ extern hdsdp_retcode HDSDPOptimize( hdsdp *HSolver, int dOptOnly ) {
     
     /* Start optimization */
     hdsdp_printf("\nHDSDP: software for semi-definite programming \n\n");
-    hdsdp_printf("Wenzhi Gao, Dongdong Ge, Yinyu Ye, 2023\n");
+    hdsdp_printf("Wenzhi Gao, Dongdong Ge, Yinyu Ye, 2024\n");
     hdsdp_printf("---------------------------------------------\n");
     HSolver->dTimeBegin = HUtilGetTimeStamp();
-    
-#ifdef DUMMY_KKT
-    hdsdp_printf("\n>>> Warning: using dummy KKT solver.\n\n");
-#endif
     
     /* Process conic data */
     hdsdp_printf("Pre-solver starts \n");
@@ -736,18 +741,6 @@ extern void HDSDPGetConeValues( hdsdp *HSolver, int iCone, double *conePrimal, d
     double dBarrierMaker = HSolver->dAccBarrierMaker;
     double *dRowDualMaker = HSolver->dAccRowDualMaker;
     double *dRowDualStepMaker = HSolver->dAccRowDualStepMaker;
-    
-#if 0
-#include "debug_data.h"
-    dBarrierMaker = globalmu;
-    dRowDualMaker = globaly;
-    dRowDualStepMaker = globaldy;
-    
-    for ( int iCone = 0; iCone < HSolver->nCones; ++iCone ) {
-        HConeReduceResi(HSolver->HCones[iCone], 0.0);
-        HConeSetPerturb(HSolver->HCones[iCone], 7.3018532792337075E-8);
-    }
-#endif
     
     if ( dBarrierMaker <= 0.0 ) {
         dBarrierMaker = HSolver->dInaccBarrierMaker;
@@ -849,7 +842,7 @@ extern hdsdp_retcode HDSDPCheckSolution( hdsdp *HSolver, double dErrs[6] ) {
         }
         
         /* Get A * X */
-        HConeComputeATimesX(HSolver->HCones[iCone], dPrimalMatBuffer, HSolver->dHAuxiVec1);
+        HConeComputeATimesXpy(HSolver->HCones[iCone], dPrimalMatBuffer, HSolver->dHAuxiVec1);
         /* Compute complementarity */
         nConeDimSqr = HConeGetVarBufferDim(HSolver->HCones[iCone]);
         dCompl += dot(&nConeDimSqr, dPrimalMatBuffer, &HIntConstantOne, dDualMatBuffer, &HIntConstantOne);
