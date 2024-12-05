@@ -86,6 +86,13 @@ dcs *dcs_done (dcs *C, void *w, void *x, int ok) {
     return (ok ? C : dcs_spfree (C)) ;   /* return result if OK, else free it */
 }
 
+int *dcs_idone (int *p, dcs *C, void *w, int ok)
+{
+    dcs_spfree (C) ;                     /* free temporary matrix */
+    dcs_free (w) ;                       /* free workspace */
+    return (ok ? p : (int *) dcs_free (p)) ; /* return result, or free it */
+}
+
 double dcs_cumsum (int *p, int *c, int n) {
     
     int i, nz = 0 ;

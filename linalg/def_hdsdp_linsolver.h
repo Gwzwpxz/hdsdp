@@ -6,8 +6,10 @@
 
 #ifdef HEADERPATH
 #include "interface/hdsdp.h"
+#include "external/qdldl.h"
 #else
 #include "hdsdp.h"
+#include "qdldl.h"
 #endif
 
 /* In HDSDP, there are two cases where positve definite matrices need to
@@ -73,6 +75,26 @@ typedef struct {
     int iparm[64];
     
 } pardiso_linsys;
+
+typedef struct {
+    
+    int nCol;
+    int *colMatUpperBeg;
+    int *colMatUpperIdx;
+    double *colMatUpperElem;
+    int *iTransMap; /* Map of entries from lower-triangular to upper-triangular */
+    
+    int *iWork;
+    
+    double *dWork;
+    int *P;
+    
+    int *Lnz;
+    int *Lp;
+    int *Li;
+    double *Lx;
+
+} qdldl_linsys;
 
 /* Dense direct */
 typedef struct {
@@ -182,11 +204,13 @@ typedef struct {
 #define set_pardiso_param(iparm, param, val) iparm[param] = val
 #define get_pardiso_output(iparm, param) iparm[param]
 
+#ifdef LINSYS_PARDISO
 extern void pardisoinit ( void *, int *, int * );
 extern void pardiso     ( void     *, int    *, int *, int *, int *, int *,
                           double   *, int    *, int *, int *, int *, int *,
                           int *, double      *, double   *, int * );
 extern void pardiso_getdiag ( const void *, void *, void *, const int *, int * );
+#endif
 
 
 /* Dense direct */

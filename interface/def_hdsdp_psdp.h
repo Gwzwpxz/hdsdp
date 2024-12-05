@@ -45,6 +45,7 @@ typedef struct {
     double **dPrimalScalX;
     double **dPrimalXStep;
     double **dPrimalMatBuffer;
+    double **dPrimalMatBuffer2;
     
     /* Each cone has its own primal ratio test */
     int iLanczos;
