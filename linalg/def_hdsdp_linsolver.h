@@ -76,6 +76,10 @@ typedef struct {
     
 } pardiso_linsys;
 
+
+/* Both QDLDL and LDL accept upper-triangular part of the matrix as input.
+   To directly use these packages, HDSDP constructs an internal map that converts
+   lower-triangular components to upper-triangular */
 typedef struct {
     
     int nCol;
@@ -95,6 +99,27 @@ typedef struct {
     double *Lx;
 
 } qdldl_linsys;
+
+typedef struct {
+    
+    int nCol;
+    int *colMatUpperBeg;
+    int *colMatUpperIdx;
+    double *colMatUpperElem;
+    int *iTransMap; /* Map of entries from lower-triangular to upper-triangular */
+    
+    int *Parent;
+    int *Flag;
+    double *D;
+    double *Y;
+    int *Pattern;
+    
+    int *Lnz;
+    int *Lp;
+    int *Li;
+    double *Lx;
+    
+} ldl_linsys;
 
 /* Dense direct */
 typedef struct {
@@ -211,7 +236,6 @@ extern void pardiso     ( void     *, int    *, int *, int *, int *, int *,
                           int *, double      *, double   *, int * );
 extern void pardiso_getdiag ( const void *, void *, void *, const int *, int * );
 #endif
-
 
 /* Dense direct */
 #define LAPACK_RET_OK    ( 0 )

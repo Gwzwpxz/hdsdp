@@ -127,15 +127,11 @@ void ldl_permt (int n, double X [ ], double B [ ], int P [ ]) ;
 int ldl_valid_perm (int n, int P [ ], int Flag [ ]) ;
 int ldl_valid_matrix ( int n, int Ap [ ], int Ai [ ]) ;
 
-#define LDL_symbolic ldl_l_symbolic
-#define LDL_numeric ldl_l_numeric
-#define LDL_lsolve ldl_l_lsolve
-#define LDL_dsolve ldl_l_dsolve
-#define LDL_ltsolve ldl_l_ltsolve
-#define LDL_perm ldl_l_perm
-#define LDL_permt ldl_l_permt
-#define LDL_valid_perm ldl_l_valid_perm
-#define LDL_valid_matrix ldl_l_valid_matrix
+#define LDL_symbolic ldl_symbolic
+#define LDL_numeric ldl_numeric
+#define LDL_lsolve ldl_lsolve
+#define LDL_dsolve ldl_dsolve
+#define LDL_ltsolve ldl_ltsolve
 
 #define IS_CSC(A) (A && (A->nz == -1))
 #define IS_TRIPLET(A) (A && (A->nz >= 0))

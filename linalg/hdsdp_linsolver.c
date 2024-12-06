@@ -505,6 +505,8 @@ static void pardisoLinSolverDestroy( void **pchol ) {
     return;
 }
 #else
+
+/* QDLDL solver for Quasi-definite systems */
 static hdsdp_retcode qdldlLinSolverCreate( void **pchol, int nCol ) {
     
     hdsdp_retcode retcode = HDSDP_RETCODE_OK;
@@ -546,11 +548,11 @@ static hdsdp_retcode qdldlLinSolverSymbolic( void *chol, int *colMatBeg, int *co
     HDSDP_MEMCHECK(qdldl->Lnz);
         
     /* Reconstruct the upper-triangular part of the matrix */
-    int nNnz = colMatBeg[qdldl->nCol];
+    int nNz = colMatBeg[qdldl->nCol];
     HDSDP_INIT(qdldl->colMatUpperBeg, int, qdldl->nCol + 1);
-    HDSDP_INIT(qdldl->colMatUpperIdx, int, nNnz);
-    HDSDP_INIT(qdldl->colMatUpperElem, double, nNnz);
-    HDSDP_INIT(qdldl->iTransMap, int, nNnz);
+    HDSDP_INIT(qdldl->colMatUpperIdx, int, nNz);
+    HDSDP_INIT(qdldl->colMatUpperElem, double, nNz);
+    HDSDP_INIT(qdldl->iTransMap, int, nNz);
     
     HDSDP_MEMCHECK(qdldl->colMatUpperBeg);
     HDSDP_MEMCHECK(qdldl->colMatUpperIdx);
@@ -805,8 +807,238 @@ static void qdldlLinSolverDestroy( void **pchol ) {
     
     return;
 }
-#endif
 
+/* LDL for indefinite systems */
+static hdsdp_retcode ldlLinSolverCreate( void **pchol, int nCol ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    
+    HDSDP_NULLCHECK(pchol);
+    ldl_linsys *ldl = NULL;
+    HDSDP_INIT(ldl, ldl_linsys, 1);
+    HDSDP_MEMCHECK(ldl);
+    
+    ldl->nCol = nCol;
+    *pchol = ldl;
+    
+exit_cleanup:
+    return retcode;
+}
+
+static void ldlLinSolverSetThreads( void *chol, void *dummy ) {
+    
+    (void) dummy;
+    
+    return;
+}
+
+static hdsdp_retcode ldlLinSolverSymbolic( void *chol, int *colMatBeg, int *colMatIdx ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    ldl_linsys *ldl = (ldl_linsys *) chol;
+    
+    HDSDP_INIT(ldl->Parent, int, ldl->nCol);
+    HDSDP_INIT(ldl->Flag, int, ldl->nCol);
+    HDSDP_INIT(ldl->Lp, int, ldl->nCol + 1);
+    HDSDP_INIT(ldl->D, double, ldl->nCol);
+    HDSDP_INIT(ldl->Y, double, ldl->nCol);
+    HDSDP_INIT(ldl->Pattern, int, ldl->nCol);
+    HDSDP_INIT(ldl->Lnz, int, ldl->nCol);
+    
+    HDSDP_MEMCHECK(ldl->Parent);
+    HDSDP_MEMCHECK(ldl->Flag);
+    HDSDP_MEMCHECK(ldl->Y);
+    HDSDP_MEMCHECK(ldl->Pattern);
+    HDSDP_MEMCHECK(ldl->D);
+    HDSDP_MEMCHECK(ldl->Lnz);
+    HDSDP_MEMCHECK(ldl->Lp);
+    
+    int nNz = colMatBeg[ldl->nCol];
+    
+    HDSDP_INIT(ldl->colMatUpperBeg, int, ldl->nCol + 1);
+    HDSDP_INIT(ldl->colMatUpperIdx, int, nNz);
+    HDSDP_INIT(ldl->colMatUpperElem, double, nNz);
+    HDSDP_INIT(ldl->iTransMap, int, nNz);
+    
+    HDSDP_MEMCHECK(ldl->colMatUpperBeg);
+    HDSDP_MEMCHECK(ldl->colMatUpperIdx);
+    HDSDP_MEMCHECK(ldl->colMatUpperElem);
+    HDSDP_MEMCHECK(ldl->iTransMap);
+    
+    int *iTransBuffer = ldl->Parent;
+        
+    /* Transpose the matrix to obtain the upper-triangular part */
+    for ( int iElem = 0; iElem < colMatBeg[ldl->nCol]; ++iElem ) {
+        iTransBuffer[colMatIdx[iElem]] += 1;
+    }
+    
+    dcs_cumsum(ldl->colMatUpperBeg, iTransBuffer, ldl->nCol);
+    
+    int iPos = 0;
+    for ( int iCol = 0; iCol < ldl->nCol; ++iCol ) {
+        for ( int iElem = colMatBeg[iCol]; iElem < colMatBeg[iCol + 1]; ++iElem ) {
+            ldl->colMatUpperIdx[iPos = iTransBuffer[colMatIdx[iElem]]++] = iCol;
+            ldl->iTransMap[iElem] = iPos;
+        }
+    }
+    
+    /* Symbolic factorization without reordering */
+    ldl_symbolic(ldl->nCol, ldl->colMatUpperBeg, ldl->colMatUpperIdx,
+                 ldl->Lp, ldl->Parent, ldl->Lnz, ldl->Flag, NULL, NULL);
+    
+    HDSDP_INIT(ldl->Li, int, ldl->Lp[ldl->nCol]);
+    HDSDP_INIT(ldl->Lx, double, ldl->Lp[ldl->nCol]);
+    HDSDP_MEMCHECK(ldl->Li);
+    HDSDP_MEMCHECK(ldl->Lx);
+    
+exit_cleanup:
+    return retcode;
+}
+
+static hdsdp_retcode ldlLinSolverNumeric( void *chol, int *colMatBeg, int *colMatIdx, double *colMatElem ) {
+    
+    hdsdp_retcode retcode = HDSDP_RETCODE_OK;
+    ldl_linsys *ldl = (ldl_linsys *) chol;
+    
+    int nCol = ldl->nCol;
+    
+    for ( int iElem = 0; iElem < ldl->colMatUpperBeg[nCol]; ++iElem ) {
+        ldl->colMatUpperElem[ldl->iTransMap[iElem]] = colMatElem[iElem];
+    }
+    
+    int nPos = ldl_numeric(nCol, ldl->colMatUpperBeg, ldl->colMatUpperIdx,
+                           ldl->colMatUpperElem, ldl->Lp, ldl->Parent, ldl->Lnz,
+                           ldl->Li, ldl->Lx, ldl->D, ldl->Y, ldl->Pattern, ldl->Flag, NULL, NULL);
+    
+    if ( nPos != nCol ) {
+        retcode = HDSDP_RETCODE_FAILED;
+        goto exit_cleanup;
+    }
+    
+exit_cleanup:
+    return retcode;
+}
+
+static hdsdp_retcode ldlLinSolverPsdCheck( void *chol, int *dummy1, int *dummy2, double *dummy3, int *dummy4 ) {
+    
+    (void) chol;
+    (void) dummy1;
+    (void) dummy2;
+    (void) dummy3;
+    (void) dummy4;
+    
+    return HDSDP_RETCODE_FAILED;
+}
+
+static void ldlLinSolverForwardN( void *chol, int dummy1, double *dummy2, double *dummy3 ) {
+
+    (void) chol;
+    (void) dummy1;
+    (void) dummy2;
+    (void) dummy3;
+    
+    return;
+}
+
+static void ldlLinSolverBackwardN( void *chol, int dummy1, double *dummy2, double *dummy3 ) {
+
+    (void) chol;
+    (void) dummy1;
+    (void) dummy2;
+    (void) dummy3;
+    
+    return;
+}
+
+static hdsdp_retcode ldlLinSolverSolveN( void *chol, int nRhs, double *rhsVec, double *solVec ) {
+    
+    ldl_linsys *ldl = (ldl_linsys *) chol;
+    
+    double *dSol = NULL;
+    if ( solVec ) {
+        dSol = solVec;
+        HDSDP_MEMCPY(dSol, rhsVec, double, ldl->nCol * nRhs);
+    } else {
+        assert( nRhs == 1 );
+        dSol = rhsVec;
+    }
+    
+    /* Solve */
+    for ( int iRhs = 0; iRhs < nRhs; ++iRhs ) {
+        ldl_lsolve(ldl->nCol, dSol, ldl->Lp, ldl->Li, ldl->Lx);
+        ldl_dsolve(ldl->nCol, dSol, ldl->D);
+        ldl_ltsolve(ldl->nCol, dSol, ldl->Lp, ldl->Li, ldl->Lx);
+        dSol += ldl->nCol;
+    }
+    
+    return HDSDP_RETCODE_OK;
+}
+
+static hdsdp_retcode ldlLinSolverGetDiag( void *chol, double *dummy ) {
+    
+    (void) chol;
+    (void) dummy;
+    
+    return HDSDP_RETCODE_FAILED;
+}
+
+static void ldlLinSolverInvert( void *chol, double *dFullMatrix, double *dAuxiMatrix ) {
+    
+    ldl_linsys *ldl = (ldl_linsys *) chol;
+    HDSDP_ZERO(dAuxiMatrix, double, ldl->nCol * ldl->nCol);
+    
+    double *pElem = dAuxiMatrix;
+    for ( int iRow = 0; iRow < ldl->nCol; ++iRow ) {
+        *pElem = 1.0;
+        pElem += ldl->nCol + 1;
+    }
+    
+    ldlLinSolverSolveN(chol, ldl->nCol, dAuxiMatrix, dFullMatrix);
+    
+    return;
+}
+
+static void ldlLinSolverClear( void *chol ) {
+    
+    if ( !chol ) {
+        return;
+    }
+    
+    ldl_linsys *ldl = (ldl_linsys *) chol;
+    
+    HDSDP_FREE(ldl->colMatUpperBeg);
+    HDSDP_FREE(ldl->colMatUpperIdx);
+    HDSDP_FREE(ldl->colMatUpperElem);
+    
+    HDSDP_FREE(ldl->iTransMap);
+    HDSDP_FREE(ldl->Parent);
+    HDSDP_FREE(ldl->Flag);
+    HDSDP_FREE(ldl->D);
+    HDSDP_FREE(ldl->Y);
+    HDSDP_FREE(ldl->Pattern);
+    
+    HDSDP_FREE(ldl->Lnz);
+    HDSDP_FREE(ldl->Lp);
+    HDSDP_FREE(ldl->Li);
+    HDSDP_FREE(ldl->Lx);
+    
+    HDSDP_ZERO(ldl, ldl_linsys, 1);
+    
+    return;
+}
+
+static void ldlLinSolverDestroy( void **pchol ) {
+    
+    if ( !pchol ) {
+        return;
+    }
+    
+    ldlLinSolverClear(*pchol);
+    HDSDP_FREE(*pchol);
+    
+    return;
+}
+#endif
 
 /* Dense direct solver interface */
 static hdsdp_retcode lapackLinSolverCreate( void **pchol, int nCol ) {
@@ -1693,8 +1925,18 @@ extern hdsdp_retcode HFpLinsysCreate( hdsdp_linsys_fp **pHLin, int nCol, linsys_
             HLinsys->cholInvert = pardisoLinSolverInvert;
             HLinsys->cholDestroy = pardisoLinSolverDestroy;
             break;
-#else
-      
+#else       
+            HLinsys->cholCreate = ldlLinSolverCreate;
+            HLinsys->cholSetParam = ldlLinSolverSetThreads;
+            HLinsys->cholSymbolic = ldlLinSolverSymbolic;
+            HLinsys->cholNumeric = ldlLinSolverNumeric;
+            HLinsys->cholPsdCheck = ldlLinSolverPsdCheck;
+            HLinsys->cholFSolve = ldlLinSolverForwardN;
+            HLinsys->cholBSolve = ldlLinSolverBackwardN;
+            HLinsys->cholSolve = ldlLinSolverSolveN;
+            HLinsys->cholGetDiag = ldlLinSolverGetDiag;
+            HLinsys->cholInvert = ldlLinSolverInvert;
+            HLinsys->cholDestroy = ldlLinSolverDestroy;
             break;
 #endif
         case HDSDP_LINSYS_DENSE_ITERATIVE:
