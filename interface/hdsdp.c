@@ -7,11 +7,13 @@
 #include "interface/hdsdp.h"
 #include "interface/hdsdp_conic.h"
 #include "interface/hdsdp_utils.h"
+#include "interface/def_hdsdp_user_data.h"
 #include "interface/hdsdp_user_data.h"
 #include "interface/hdsdp_schur.h"
 #include "interface/hdsdp_algo.h"
 #include "interface/hdsdp_psdp.h"
 #include "linalg/dense_opts.h"
+#include "linalg/vec_opts.h"
 #else
 #include "def_hdsdp.h"
 #include "hdsdp.h"

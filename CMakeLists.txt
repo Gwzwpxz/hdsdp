@@ -1,149 +1,142 @@
 cmake_minimum_required(VERSION 3.21)
+project(hdsdp LANGUAGES C)
 
-set(CMAKE_OSX_ARCHITECTURES x86_64)
-project(hdsdp C)
-set(CMAKE_C_STANDARD 11)
+#-------------------------------
+# Options and configurations
+#-------------------------------
+option(LINSYS_PARDISO "Enable MKL Pardiso support (requires MKL)" OFF)
 
-# Configure MKL paths
-set(ENV{HDSDP_HOME} cmake)
+# Add compile definitions based on user input
+if(LINSYS_PARDISO)
+    add_compile_definitions(LINSYS_PARDISO)
+endif()
 
-# Include project directory
-include_directories(externals)
-include_directories(include)
-include_directories(interface)
-include_directories(src/data)
-include_directories(src/dsalg)
-include_directories(src/linsys)
-include_directories(src/presolve)
+add_compile_definitions(HEADERPATH)
 
-add_executable(hdsdp
-        externals/config.c
-        externals/config.h
-        externals/cs.c
-        externals/cs.h
-        include/dsdplapack.h
-        interface/dsdphsd.c
-        interface/dsdphsd.h
-        interface/dsdplog.c
-        interface/dsdplog.h
-        interface/dsdpoutput.c
-        interface/dsdpoutput.h
-        interface/dsdpparam.c
-        interface/dsdpparam.h
-        interface/dsdpreadsdpa.c
-        interface/dsdpreadsdpa.h
-        interface/dsdpsolver.h
-        interface/dsdpstats.c
-        interface/dsdpstats.h
-        interface/hdsdp.c
-        src/data/dsdpdata.c
-        src/data/dsdpdata.h
-        src/data/dsdpsort.c
-        src/data/dsdpsort.h
-        src/dsalg/dsdpcorrector.c
-        src/dsalg/dsdpcorrector.h
-        src/dsalg/dsdpdinfeas.c
-        src/dsalg/dsdpdinfeas.h
-        src/dsalg/dsdpinitializer.c
-        src/dsalg/dsdpinitializer.h
-        src/dsalg/dsdppfeas.c
-        src/dsalg/dsdppfeas.h
-        src/dsalg/dsdppfeascheck.c
-        src/dsalg/dsdppfeascheck.h
-        src/dsalg/dsdpproxmeasure.c
-        src/dsalg/dsdpproxmeasure.h
-        src/dsalg/dsdppsol.c
-        src/dsalg/dsdppsol.h
-        src/dsalg/dsdputils.c
-        src/dsalg/dsdputils.h
-        src/dsalg/heurpool.c
-        src/dsalg/heurpool.h
-        src/dsalg/schurmatops.c
-        src/dsalg/schurmatops.h
-        src/dsalg/stepdirection.c
-        src/dsalg/stepdirection.h
-        src/dsalg/stepheur.c
-        src/dsalg/stepheur.h
-        src/dsalg/symschur.c
-        src/dsalg/symschur.h
-        src/linsys/denseopts.h
-        src/linsys/adpcg.h
-        src/linsys/lanczos.h
-        src/linsys/pardiso.h
-        src/linsys/rankkopts.h
-        src/linsys/rank1opts.h
-        src/linsys/sparseopts.h
-        src/linsys/speigs.h
-        src/linsys/structs.h
-        src/linsys/vec.h
-        src/presolve/dsdppresolve.c
-        src/presolve/dsdppresolve.h)
+#-------------------------------
+# Find BLAS/LAPACK
+#-------------------------------
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
 
-add_library(hdsdplib SHARED
-        externals/config.c
-        externals/config.h
-        externals/cs.c
-        externals/cs.h
-        include/dsdplapack.h
-        interface/dsdphsd.c
-        interface/dsdphsd.h
-        interface/dsdplog.c
-        interface/dsdplog.h
-        interface/dsdpoutput.c
-        interface/dsdpoutput.h
-        interface/dsdpparam.c
-        interface/dsdpparam.h
-        interface/dsdpreadsdpa.c
-        interface/dsdpreadsdpa.h
-        interface/dsdpsolver.h
-        interface/dsdpstats.c
-        interface/dsdpstats.h
-        interface/hdsdp.c
-        src/data/dsdpdata.c
-        src/data/dsdpdata.h
-        src/data/dsdpsort.c
-        src/data/dsdpsort.h
-        src/dsalg/dsdpcorrector.c
-        src/dsalg/dsdpcorrector.h
-        src/dsalg/dsdpdinfeas.c
-        src/dsalg/dsdpdinfeas.h
-        src/dsalg/dsdpinitializer.c
-        src/dsalg/dsdpinitializer.h
-        src/dsalg/dsdppfeas.c
-        src/dsalg/dsdppfeas.h
-        src/dsalg/dsdppfeascheck.c
-        src/dsalg/dsdppfeascheck.h
-        src/dsalg/dsdpproxmeasure.c
-        src/dsalg/dsdpproxmeasure.h
-        src/dsalg/dsdppsol.c
-        src/dsalg/dsdppsol.h
-        src/dsalg/dsdputils.c
-        src/dsalg/dsdputils.h
-        src/dsalg/heurpool.c
-        src/dsalg/heurpool.h
-        src/dsalg/schurmatops.c
-        src/dsalg/schurmatops.h
-        src/dsalg/stepdirection.c
-        src/dsalg/stepdirection.h
-        src/dsalg/stepheur.c
-        src/dsalg/stepheur.h
-        src/dsalg/symschur.c
-        src/dsalg/symschur.h
-        src/linsys/denseopts.h
-        src/linsys/adpcg.h
-        src/linsys/lanczos.h
-        src/linsys/pardiso.h
-        src/linsys/rankkopts.h
-        src/linsys/rank1opts.h
-        src/linsys/sparseopts.h
-        src/linsys/speigs.h
-        src/linsys/structs.h
-        src/linsys/vec.h
-        src/presolve/dsdppresolve.c
-        src/presolve/dsdppresolve.h)
+if(NOT BLAS_FOUND OR NOT LAPACK_FOUND)
+    message(FATAL_ERROR "BLAS and LAPACK are required but not found.")
+endif()
 
-target_link_libraries(hdsdp $ENV{HDSDP_HOME}/lib/libhdsdplinsys.dylib)
-target_link_libraries(hdsdp m)
+#-------------------------------
+# If LINSYS_PARDISO is enabled, link MKL
+# Adjust this section for your MKL installation.
+#-------------------------------
+if(LINSYS_PARDISO)
+    # Attempt to find MKL via environment variables or specify manually
+    # You may need something like:
+    # set(MKL_ROOT "/path/to/mkl")
+    # include_directories("${MKL_ROOT}/include")
+    # list(APPEND MKL_LIBS "${MKL_ROOT}/lib/intel64/libmkl_intel_lp64.so" "${MKL_ROOT}/lib/intel64/libmkl_core.so" "${MKL_ROOT}/lib/intel64/libmkl_sequential.so")
 
-target_link_libraries(hdsdplib $ENV{HDSDP_HOME}/lib/libhdsdplinsys.dylib)
-target_link_libraries(hdsdplib m)
+    # The exact MKL libraries to link depend on your system and MKL version.
+    # For demonstration, we'll assume user sets MKL_LIBS externally or knows how to modify this part.
+    if(WIN32)
+        # Example for Windows (adjust .lib files as needed):
+        # list(APPEND MKL_LIBS "mkl_intel_lp64.lib" "mkl_core.lib" "mkl_sequential.lib")
+    elseif(APPLE)
+        # macOS Example:
+        # list(APPEND MKL_LIBS "/opt/intel/mkl/lib/libmkl_intel_lp64.dylib" "/opt/intel/mkl/lib/libmkl_core.dylib" "/opt/intel/mkl/lib/libmkl_sequential.dylib")
+    else()
+        # Linux Example:
+        # list(APPEND MKL_LIBS "/opt/intel/mkl/lib/intel64/libmkl_intel_lp64.so" "/opt/intel/mkl/lib/intel64/libmkl_core.so" "/opt/intel/mkl/lib/intel64/libmkl_sequential.so")
+    endif()
+endif()
+
+#-------------------------------
+# Gather sources for libraries
+#
+# We want all sources outside test/, excluding memwatch.*
+# The directory structure is:
+#  - external
+#  - interface
+#  - linalg
+#
+# Also exclude main.c (it has a main function or might cause conflicts), and exclude memwatch.
+#-------------------------------
+
+file(GLOB EXTERNAL_SOURCES
+    external/*.c
+)
+file(GLOB INTERFACE_SOURCES
+    interface/*.c
+)
+file(GLOB LINALG_SOURCES
+    linalg/*.c
+)
+
+# Exclude memwatch from external sources
+list(FILTER EXTERNAL_SOURCES EXCLUDE REGEX "memwatch\\.c")
+
+# Exclude main.c if present in top-level (to avoid multiple mains or unwanted code in the library)
+set(TOP_LEVEL_SOURCES "")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/main.c")
+    set(TOP_LEVEL_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/main.c")
+endif()
+
+# Exclude main.c from library sources (if it exists)
+list(FILTER TOP_LEVEL_SOURCES EXCLUDE REGEX "main\\.c")
+
+set(LIB_SOURCES
+    ${EXTERNAL_SOURCES}
+    ${INTERFACE_SOURCES}
+    ${LINALG_SOURCES}
+)
+
+#-------------------------------
+# Create Shared and Static libraries named hdsdp
+#
+# We'll create two targets: hdsdp_shared and hdsdp_static
+# Then set their OUTPUT_NAME to "hdsdp"
+#-------------------------------
+add_library(hdsdp_shared SHARED ${LIB_SOURCES})
+target_include_directories(hdsdp_shared PUBLIC
+    ${CMAKE_SOURCE_DIR}
+)
+set_target_properties(hdsdp_shared PROPERTIES OUTPUT_NAME "hdsdp")
+target_link_libraries(hdsdp_shared PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+if(LINSYS_PARDISO AND MKL_LIBS)
+    target_link_libraries(hdsdp_shared PRIVATE ${MKL_LIBS})
+endif()
+
+add_library(hdsdp_static STATIC ${LIB_SOURCES})
+target_include_directories(hdsdp_static PUBLIC
+    ${CMAKE_SOURCE_DIR}
+)
+set_target_properties(hdsdp_static PROPERTIES OUTPUT_NAME "hdsdp")
+target_link_libraries(hdsdp_static PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+if(LINSYS_PARDISO AND MKL_LIBS)
+    target_link_libraries(hdsdp_static PRIVATE ${MKL_LIBS})
+endif()
+
+#-------------------------------
+# Create the executable sdpasolve from tests/sdpasolve.c
+#
+# The sdpasolve binary presumably uses the hdsdp library.
+# We explicitly include sdpasolve.c from the tests directory.
+#-------------------------------
+add_executable(sdpasolve tests/sdpasolve.c)
+target_include_directories(sdpasolve PUBLIC
+    ${CMAKE_SOURCE_DIR}
+)
+target_link_libraries(sdpasolve PRIVATE hdsdp_shared ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+if(LINSYS_PARDISO AND MKL_LIBS)
+    target_link_libraries(sdpasolve PRIVATE ${MKL_LIBS})
+endif()
+
+# If you need C99 standard:
+set_property(TARGET hdsdp_shared hdsdp_static sdpasolve PROPERTY C_STANDARD 99)
+
+#-------------------------------
+# Optional: Install rules
+#-------------------------------
+install(TARGETS hdsdp_shared hdsdp_static sdpasolve
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        INCLUDES DESTINATION include)

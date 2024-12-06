@@ -23,7 +23,7 @@
 //#define HDSDP_LINSYS_PROFILE
 #define HDSDP_PIPMMETRIC_DEBUG
 
-#define MEMORY_DEBUG
+//#define MEMORY_DEBUG
 #define KKT_ACCURACY (1e-12)
 #define HDSDP_SPARSE_CONE_THRESHOLD  (0.3)
 #define HDSDP_SPARSE_SCHUR_THRESHOLD (0.3)
@@ -98,8 +98,8 @@ typedef struct hdsdp_solver_internal hdsdp;
 
 // Build date
 #define BUILD_DATE_YEAR         2024
-#define BUILD_DATE_MONTH        09
-#define BUILD_DATE_DAY          08
+#define BUILD_DATE_MONTH        12
+#define BUILD_DATE_DAY          05
 
 #ifdef __cplusplus
 extern "C" {

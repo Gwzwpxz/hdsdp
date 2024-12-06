@@ -3,12 +3,12 @@
 
 #ifdef HEADERPATH
 #include "interface/hdsdp_utils.h"
-#include "linalg/hdsdp_linsolver.h"
 #include "interface/def_hdsdp_lpkkt.h"
+#include "linalg/hdsdp_linsolver.h"
 #else
 #include "hdsdp_utils.h"
-#include "hdsdp_linsolver.h"
 #include "def_hdsdp_lpkkt.h"
+#include "hdsdp_linsolver.h"
 #endif
 
 

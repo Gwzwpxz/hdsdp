@@ -6,7 +6,7 @@
 #ifdef HEADERPATH
 #include "interface/hdsdp_conic.h"
 #include "interface/hdsdp_utils.h"
-#include "interface/def_hdsdp_sdpdata.h"
+#include "linalg/def_hdsdp_sdpdata.h"
 #include "linalg/hdsdp_sdpdata.h"
 #include "linalg/vec_opts.h"
 #include "linalg/sparse_opts.h"

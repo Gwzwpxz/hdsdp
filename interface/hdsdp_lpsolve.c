@@ -5,16 +5,16 @@
 
 #ifdef HEADERPATH
 #include "interface/hdsdp_utils.h"
-#include "interface/hdsdp_linsolver.h"
 #include "interface/hdsdp_lpsolve.h"
 #include "interface/hdsdp_lpkkt.h"
+#include "linalg/hdsdp_linsolver.h"
 #include "linalg/vec_opts.h"
 #include "linalg/sparse_opts.h"
 #else
 #include "hdsdp_utils.h"
-#include "hdsdp_linsolver.h"
 #include "hdsdp_lpsolve.h"
 #include "hdsdp_lpkkt.h"
+#include "hdsdp_linsolver.h"
 #include "vec_opts.h"
 #include "sparse_opts.h"
 #endif

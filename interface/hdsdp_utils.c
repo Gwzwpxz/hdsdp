@@ -688,8 +688,17 @@ exit_cleanup:
     return retcode;
 }
 
+#ifdef LINSYS_PARDISO
 extern int MKL_Get_Max_Threads( void );
 extern int MKL_Set_Num_Threads( int nth );
+#else
+extern int MKL_Get_Max_Threads( void ) {
+    return 1;
+}
+extern int MKL_Set_Num_Threads( int nth ) {
+    return 0;
+}
+#endif
 
 extern int HUtilGetGlobalMKLThreads( void ) {
     

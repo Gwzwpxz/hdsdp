@@ -1,5 +1,5 @@
 #ifdef HEADERPATH
-#include "interface/lp_mps.h"
+#include "external/lp_mps.h"
 #include "external/hdsdp_cs.h"
 #else
 #include "lp_mps.h"
