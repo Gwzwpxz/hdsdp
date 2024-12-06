@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
+# set(CMAKE_OSX_ARCHITECTURES x86_64)
 project(hdsdp LANGUAGES C)
 
 #-------------------------------
