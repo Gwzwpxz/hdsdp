@@ -1,8 +1,10 @@
 #ifdef HEADERPATH
+#include "external/lapack_names.h"
 #include "interface/hdsdp_utils.h"
 #include "linalg/dense_opts.h"
 #include "linalg/vec_opts.h"
 #else
+#include "lapack_names.h"
 #include "hdsdp_utils.h"
 #include "dense_opts.h"
 #include "vec_opts.h"
@@ -10,35 +12,6 @@
 
 #include <math.h>
 
-#ifdef UNDERBLAS
-#define dsymv dsymv_
-#define dgemv dgemv_
-#define dsyevr dsyevr_
-#define dspmv dspmv_
-#define dsymm dsymm_
-#define dsyr dsyr_
-#define dger dger_
-#endif
-
-#ifdef CAPBLAS
-#define dsymv DSYMV
-#define dgemv DGEMV
-#define dsyevr DSYEVR
-#define dspmv DSPMV
-#define dsymm DSYMM
-#define dsyr DSYR
-#define dger DGER
-#endif
-
-#ifdef UNDERCAPBLAS
-#define dsymv DSYMV_
-#define dgemv DGEMV_
-#define dsyevr DSYEVR_
-#define dspmv DSPMV_
-#define dsymm DSYMM_
-#define dsyr DSYR_
-#define dger DGER_
-#endif
 
 extern void dsymv( const char *uplo, const int *n, const double *alpha,
                    const double *a, const int *lda, const double *x,

@@ -7,9 +7,11 @@
 #ifdef HEADERPATH
 #include "interface/hdsdp.h"
 #include "external/qdldl.h"
+#include "external/lapack_names.h"
 #else
 #include "hdsdp.h"
 #include "qdldl.h"
+#include "lapack_names.h"
 #endif
 
 /* In HDSDP, there are two cases where positve definite matrices need to
@@ -244,33 +246,6 @@ extern void pardiso_getdiag ( const void *, void *, void *, const int *, int * )
 #define LAPACK_TRANS     ('T')
 #define LAPACK_SIDE_LEFT ('L')
 #define LAPACK_DIAG_NONUNIT ('N')
-
-#ifdef UNDERBLAS
-#define dsytrs dsytrs_
-#define dsyevr dsyevr_
-#define dsytrf dsytrf_
-#define dpotri dpotri_
-#define dpotrs dpotrs_
-#define dpotrf dpotrf_
-#endif
-
-#ifdef CAPBLAS
-#define dsytrs DSYTRS
-#define dsyevr DSYEVR
-#define dsytrf DSYTRF
-#define dpotri DPOTRI
-#define dpotrs DPOTRS
-#define dpotrf DPOTRF
-#endif
-
-#ifdef UNDERCAPBLAS
-#define dsytrs DSYTRS_
-#define dsyevr DSYEVR_
-#define dsytrf DSYTRF_
-#define dpotri DPOTRI_
-#define dpotrs DPOTRS_
-#define dpotrf DPOTRF_
-#endif
 
 /* For different LAPACK routines */
 extern void dtrsv( const char *uplo, const char *trans, const char *diag,
