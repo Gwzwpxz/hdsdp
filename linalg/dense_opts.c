@@ -10,6 +10,36 @@
 
 #include <math.h>
 
+#ifdef UNDERBLAS
+#define dsymv dsymv_
+#define dgemv dgemv_
+#define dsyevr dsyevr_
+#define dspmv dspmv_
+#define dsymm dsymm_
+#define dsyr dsyr_
+#define dger dger_
+#endif
+
+#ifdef CAPBLAS
+#define dsymv DSYMV
+#define dgemv DGEMV
+#define dsyevr DSYEVR
+#define dspmv DSPMV
+#define dsymm DSYMM
+#define dsyr DSYR
+#define dger DGER
+#endif
+
+#ifdef UNDERCAPBLAS
+#define dsymv DSYMV_
+#define dgemv DGEMV_
+#define dsyevr DSYEVR_
+#define dspmv DSPMV_
+#define dsymm DSYMM_
+#define dsyr DSYR_
+#define dger DGER_
+#endif
+
 extern void dsymv( const char *uplo, const int *n, const double *alpha,
                    const double *a, const int *lda, const double *x,
                    const int *incx, const double *beta, double *y, const int *incy );
