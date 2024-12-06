@@ -13,8 +13,12 @@ if(LINSYS_PARDISO)
 endif()
 
 add_compile_definitions(HEADERPATH)
-# add_compile_definitions(UNDERBLAS)
+# ddot_
+# add_compile_definitions(UNDERBLAS)    
+# DDOT
 # add_compile_definitions(CAPBLAS)
+# DDOT_
+# add_compile_definitions(CAPUNDERBLAS)
 
 #-------------------------------
 # Find BLAS/LAPACK
@@ -44,10 +48,10 @@ if(LINSYS_PARDISO)
         # list(APPEND MKL_LIBS "mkl_intel_lp64.lib" "mkl_core.lib" "mkl_sequential.lib")
     elseif(APPLE)
         # macOS Example:
-        # list(APPEND MKL_LIBS "/opt/intel/mkl/lib/libmkl_intel_lp64.dylib" "/opt/intel/mkl/lib/libmkl_core.dylib" "/opt/intel/mkl/lib/libmkl_sequential.dylib")
+        list(APPEND MKL_LIBS "/opt/intel/oneapi/mkl/2021.2.0/lib/libmkl_intel_lp64.dylib" "/opt/intel/oneapi/mkl/2021.2.0/lib/libmkl_core.dylib" "/opt/intel/oneapi/mkl/2021.2.0/lib/libmkl_sequential.dylib")
     else()
         # Linux Example:
-        # list(APPEND MKL_LIBS "/opt/intel/mkl/lib/intel64/libmkl_intel_lp64.so" "/opt/intel/mkl/lib/intel64/libmkl_core.so" "/opt/intel/mkl/lib/intel64/libmkl_sequential.so")
+        # list(APPEND MKL_LIBS "/opt/intel/oneapi/mkl/2021.2.0/lib/intel64/libmkl_intel_lp64.so" "/opt/intel/oneapi/mkl/2021.2.0/lib/intel64/libmkl_core.so" "/opt/intel/oneapi/mkl/2021.2.0/lib/intel64/libmkl_sequential.so")
     endif()
 endif()
 

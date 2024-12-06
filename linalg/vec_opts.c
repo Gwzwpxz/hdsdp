@@ -38,6 +38,21 @@
 #define dsymv DSYMV
 #endif
 
+#ifdef UNDERCAPBLAS
+#define ddot DDOT_
+#define daxpy DAXPY_
+#define dsymm DSYMM_
+#define dtrsm DTRSM_
+#define dscal DSCAL_
+#define dsyr DSYR_
+#define dgemv DGEMV_
+#define dnrm2 DNRM2_
+#define dspmv DSPMV_
+#define dger DGER_
+#define drscl DRSCL_
+#define dsymv DSYMV_
+#endif
+
 /* Blas functions */
 extern double dnrm2( int *n, double *x, int *incx );
 extern void daxpy( int *n, double *a, double *x, int *incx, double *y, int *incy );

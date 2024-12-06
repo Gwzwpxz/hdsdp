@@ -263,6 +263,15 @@ extern void pardiso_getdiag ( const void *, void *, void *, const int *, int * )
 #define dpotrf DPOTRF
 #endif
 
+#ifdef UNDERCAPBLAS
+#define dsytrs DSYTRS_
+#define dsyevr DSYEVR_
+#define dsytrf DSYTRF_
+#define dpotri DPOTRI_
+#define dpotrs DPOTRS_
+#define dpotrf DPOTRF_
+#endif
+
 /* For different LAPACK routines */
 extern void dtrsv( const char *uplo, const char *trans, const char *diag,
                    const int *n, const double *a, const int *lda, double *x,
