@@ -10,8 +10,13 @@
 #include "hdsdp_schur.h"
 #endif
 
-#include <math.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/time.h>
+#endif
+
+#include <math.h>
 #include <signal.h>
 
 static int isCtrlC = 0;
@@ -22,12 +27,21 @@ static void monitorCtrlC( int sigNum ) {
 
 static struct sigaction act;
 
-/* TODO: Add compatibility for Windows platform */
-static double my_clock( void ) {
-    
+static double my_clock(void) {
+#ifdef _WIN32
+    FILETIME ft;
+    unsigned long long tmp;
+    const unsigned long long epoch_diff = 116444736000000000ULL;
+    GetSystemTimeAsFileTime(&ft);
+    tmp = ((unsigned long long)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+    tmp -= epoch_diff;
+
+    return (double)(tmp) / 10000000.0;
+#else
     struct timeval t;
     gettimeofday(&t, NULL);
     return (1e-06 * t.tv_usec + t.tv_sec);
+#endif
 }
 
 static int dpartitioni( int *ind, double *val, int l, int h ) {
