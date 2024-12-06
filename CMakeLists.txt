@@ -13,6 +13,8 @@ if(LINSYS_PARDISO)
 endif()
 
 add_compile_definitions(HEADERPATH)
+# add_compile_definitions(UNDERBLAS)
+# add_compile_definitions(CAPBLAS)
 
 #-------------------------------
 # Find BLAS/LAPACK
