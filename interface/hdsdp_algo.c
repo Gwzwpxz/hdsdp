@@ -74,7 +74,7 @@ static void HDSDP_SetStart( hdsdp *HSolver, int SDPMethod, int dOnly ) {
         
         if ( dOnly ) {
             HSolver->dBarrierMu = 1e+08;
-            HSolver->dResidual = - objFroNorm * get_dbl_param(HSolver, DBL_PARAM_DUALSTART);
+            HSolver->dResidual = - objFroNorm * get_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART);
         } else {
             HSolver->dBarrierMu = 1e+08;
             HSolver->dResidual = - objFroNorm * 1e+01;
@@ -83,7 +83,7 @@ static void HDSDP_SetStart( hdsdp *HSolver, int SDPMethod, int dOnly ) {
     } else if ( SDPMethod == HDSDP_ALGO_DUAL_INFEAS ) {
         
         /* Initialization for dual infeasible algorithm */
-        HSolver->dResidual = - objFroNorm * get_dbl_param(HSolver, DBL_PARAM_DUALSTART);
+        HSolver->dResidual = - objFroNorm * get_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART);
         HSolver->pInfeas = 1.0 + get_dbl_feature(HSolver, DBL_FEATURE_RHSFRONORM);
         HSolver->pObjInternal = get_dbl_param(HSolver, DBL_PARAM_POBJSTART);
         HSolver->dBarrierMu = HSolver->pObjInternal - HSolver->dObjInternal - \

@@ -33,7 +33,7 @@
 static void HDSDPIGetStatistics( hdsdp *HSolver ) {
     
     /* Collect statistics for parameter adjustment */
-    hdsdp_printf("  Collecting statistcs \n");
+    hdsdp_printf("  Collecting statistics \n");
     
     /* Get sum of conic dimensions. Used to convert the identity matrix to Frobenius norm */
     int sumConeDims = 0;
@@ -142,7 +142,7 @@ static void HDSDPIAdjustConeParams( hdsdp *HSolver ) {
     if ( get_int_feature(HSolver, INT_FEATURE_I_MANYCONES) ) {
         set_int_param(HSolver, INT_PARAM_CORRECTORA, 6);
         set_int_param(HSolver, INT_PARAM_CORRECTORB, 0);
-        set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1.0);
+        set_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART, 1.0);
         set_dbl_param(HSolver, DBL_PARAM_POBJSTART, 1e+10);
     }
     
@@ -184,14 +184,14 @@ static void HDSDPIAdjustConeParams( hdsdp *HSolver ) {
     
     if ( isExtremelyDense ) {
         set_int_param(HSolver, INT_PARAM_CORRECTORA, 4);
-        set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1.0);
+        set_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART, 1.0);
         set_dbl_param(HSolver, DBL_PARAM_DUALBOX_UP, 1e+04);
         set_dbl_param(HSolver, DBL_PARAM_DUALBOX_LOW, -1e+04);
         strcat(HSolver->modelFeatures, "dense ");
     }
     
     if ( isImpliedTrace ) {
-        set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1e+03);
+        set_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART, 1e+03);
         set_dbl_param(HSolver, DBL_PARAM_TRXESTIMATE, get_dbl_feature(HSolver, DBL_FEATURE_IMPTRACEX));
         set_dbl_param(HSolver, DBL_PARAM_POBJSTART, 1e+08);
         set_dbl_param(HSolver, DBL_PARAM_POTRHOVAL, 5.0);
@@ -203,7 +203,7 @@ static void HDSDPIAdjustConeParams( hdsdp *HSolver ) {
     if ( isNoPrimalInterior ) {
         set_dbl_param(HSolver, DBL_PARAM_DUALBOX_UP, 1e+04);
         set_dbl_param(HSolver, DBL_PARAM_DUALBOX_LOW, -1e+04);
-        set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1e+03);
+        set_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART, 1e+03);
         set_dbl_param(HSolver, DBL_PARAM_PRECORDACC, 1e-07);
         strcat(HSolver->modelFeatures, "no-primal interior ");
     }
@@ -227,10 +227,10 @@ static void HDSDPIAdjustConeParams( hdsdp *HSolver ) {
         }
         
         if ( isUpper && isLower ) {
-            set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1e+02);
+            set_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART, 1e+02);
             set_dbl_param(HSolver, DBL_PARAM_POBJSTART, 1e+05);
         } else {
-            set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1e+05);
+            set_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART, 1e+05);
             set_dbl_param(HSolver, DBL_PARAM_POBJSTART, 1e+10);
             set_int_param(HSolver, INT_PARAM_CORRECTORA, 12);
             set_int_param(HSolver, INT_PARAM_CORRECTORB, 12);
@@ -248,7 +248,7 @@ static void HDSDPIAdjustConeParams( hdsdp *HSolver ) {
         set_dbl_param(HSolver, DBL_PARAM_DUALBOX_LOW, -1.0);
         
         if ( HSolver->dAllConeDims > 100000 ) {
-            set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1e+00);
+            set_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART, 1e+00);
             set_dbl_param(HSolver, DBL_PARAM_ABSFEASTOL, 1e-04);
             set_dbl_param(HSolver, DBL_PARAM_RELFEASTOL, 1e-05);
         } else {
@@ -264,7 +264,7 @@ static void HDSDPIAdjustConeParams( hdsdp *HSolver ) {
     }
     
     if ( isNoObj ) {
-        set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1.0);
+        set_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART, 1.0);
         set_dbl_param(HSolver, DBL_PARAM_DUALBOX_UP, 1.0);
         set_dbl_param(HSolver, DBL_PARAM_DUALBOX_LOW, -1.0);
         strcat(HSolver->modelFeatures, "no objective ");
@@ -416,7 +416,7 @@ static void HDSDPIGetDefaultParams( hdsdp *HSolver ) {
     set_dbl_param(HSolver, DBL_PARAM_DUALBOX_LOW, -1e+07);
     set_dbl_param(HSolver, DBL_PARAM_BARMUSTART, 1e+05);
     set_dbl_param(HSolver, DBL_PARAM_POBJSTART, 1e+10);
-    set_dbl_param(HSolver, DBL_PARAM_DUALSTART, 1e+05);
+    set_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART, 1e+05);
     set_dbl_param(HSolver, DBL_PARAM_TRXESTIMATE, 1e+08);
     set_dbl_param(HSolver, DBL_PARAM_PRECORDACC, 1e-08);
     
@@ -443,7 +443,7 @@ static void HDSDPIPrintParams( hdsdp *HSolver ) {
     print_dbl_param(HSolver, DBL_PARAM_DUALBOX_LOW, "Dual box low");
     print_dbl_param(HSolver, DBL_PARAM_DUALBOX_UP, "Dual box up");
     print_dbl_param(HSolver, DBL_PARAM_BARMUSTART, "Starting barrier mu");
-    print_dbl_param(HSolver, DBL_PARAM_DUALSTART, "Starting residual");
+    print_dbl_param(HSolver, DBL_PARAM_DUALSLACKSTART, "Starting residual");
     print_dbl_param(HSolver, DBL_PARAM_POBJSTART, "Starting primal");
     
     hdsdp_printf("\n");

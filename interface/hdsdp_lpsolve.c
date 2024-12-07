@@ -1335,7 +1335,7 @@ extern hdsdp_retcode HLpSolverOptimize( hdsdp_lpsolver *HLp ) {
     int goOn = 0;
     int iPrimalStart = 0;
     
-    hdsdp_printf("Opimizing an LP of %d variables and %d constraints\n", HLp->nCol, HLp->nRow);
+    hdsdp_printf("Optimizing an LP of %d variables and %d constraints\n", HLp->nCol, HLp->nRow);
     hdsdp_printf("Data statistics: |A| = %5.2e |b| = %5.2e |c| = %5.2e Nnz = %d \n",
                  HLp->lpstats.dAMatAbsNorm, HLp->lpstats.dRhsOneNorm, HLp->lpstats.dObjOneNorm, HLp->lpstats.nAMatNz);
     

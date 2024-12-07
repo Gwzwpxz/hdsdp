@@ -16,8 +16,8 @@
  * SDP cone: CSC representation of an [(n + 1) \* n / 2] by [m + 1] matrix, containing SDP matrix
  * coefficients and objective coefficients in each column, only lower triangular is stored
  *
- * LP cone and bound cone: CSC representation of an [n] by [m] matrix, containg LP data
- * 
+ * LP cone and bound cone: CSC representation of an [n] by [m] matrix, containing LP data
+ *
  */
 struct hdsdp_user_data {
     
