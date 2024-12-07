@@ -131,7 +131,7 @@ add_executable(sdpasolve tests/sdpasolve.c)
 target_include_directories(sdpasolve PUBLIC
     ${CMAKE_SOURCE_DIR}
 )
-target_link_libraries(sdpasolve PRIVATE hdsdp_shared ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+target_link_libraries(sdpasolve PRIVATE hdsdp_shared ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} m)
 if(LINSYS_PARDISO AND MKL_LIBS)
     target_link_libraries(sdpasolve PRIVATE ${MKL_LIBS})
 endif()
