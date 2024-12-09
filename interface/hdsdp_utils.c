@@ -25,7 +25,9 @@ static void monitorCtrlC( int sigNum ) {
     return;
 }
 
+#ifndef _WIN32
 static struct sigaction act;
+#endif
 
 static double my_clock(void) {
 #ifdef _WIN32
@@ -498,8 +500,10 @@ extern void HUtilSortDblByDbl( double *data, double *ref, int low, int up ) {
 
 extern void HUtilStartCtrlCCheck( void ) {
     
+#ifndef _WIN32
     act.sa_handler = monitorCtrlC;
     sigaction(SIGINT, &act, NULL);
+#endif
     
     return;
 }

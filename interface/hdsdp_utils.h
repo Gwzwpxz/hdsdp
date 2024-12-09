@@ -69,7 +69,15 @@ printf("Function Profiler: Line %d of %s by %d runs. "       \
     "Running time: %fs\n", __LINE__, __FILE__, \
     (HUtilGetTimeStamp() - tHDSDPStart))
 
+
+/* Function pointer macro */
 #define set_func_pointer(A, B) (A = (typeof(A)) B)
+
+/* Redefine the macro when the OS is Windows*/
+#ifdef _WIN32
+#undef set_func_pointer
+#define set_func_pointer(A, B) A = B
+#endif
 #define set_int_param(hdsdp, param, val)  hdsdp->HIntParams[param] = val
 #define set_dbl_param(hdsdp, param, val)  hdsdp->HDblParams[param] = val
 #define get_int_param(hdsdp, param) hdsdp->HIntParams[param]

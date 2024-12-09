@@ -127,17 +127,19 @@ endif()
 # The sdpasolve binary presumably uses the hdsdp library.
 # We explicitly include sdpasolve.c from the tests directory.
 #-------------------------------
-add_executable(sdpasolve tests/sdpasolve.c)
-target_include_directories(sdpasolve PUBLIC
-    ${CMAKE_SOURCE_DIR}
-)
-target_link_libraries(sdpasolve PRIVATE hdsdp_shared ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} m)
-if(LINSYS_PARDISO AND MKL_LIBS)
-    target_link_libraries(sdpasolve PRIVATE ${MKL_LIBS})
-endif()
+if(NOT WIN32)
+    add_executable(sdpasolve tests/sdpasolve.c)
+    target_include_directories(sdpasolve PUBLIC
+        ${CMAKE_SOURCE_DIR}
+    )
+    target_link_libraries(sdpasolve PRIVATE hdsdp_shared ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} m)
+    if(LINSYS_PARDISO AND MKL_LIBS)
+        target_link_libraries(sdpasolve PRIVATE ${MKL_LIBS})
+    endif()
 
-# If you need C99 standard:
-set_property(TARGET hdsdp_shared hdsdp_static sdpasolve PROPERTY C_STANDARD 99)
+    # If you need C99 standard:
+    set_property(TARGET hdsdp_shared hdsdp_static sdpasolve PROPERTY C_STANDARD 99)
+endif()
 
 #-------------------------------
 # Optional: Install rules
