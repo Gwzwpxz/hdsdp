@@ -140,12 +140,3 @@ if(NOT WIN32)
     # If you need C99 standard:
     set_property(TARGET hdsdp_shared hdsdp_static sdpasolve PROPERTY C_STANDARD 99)
 endif()
-
-#-------------------------------
-# Optional: Install rules
-#-------------------------------
-install(TARGETS hdsdp_shared hdsdp_static sdpasolve
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-        INCLUDES DESTINATION include)
