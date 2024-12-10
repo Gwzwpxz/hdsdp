@@ -480,9 +480,9 @@ static int HLpSolverIComputeSolutionStats( hdsdp_lpsolver *HLp, int iIter ) {
                  HLp->dProxNorm, HLpKKTGetFactorSolveTimeRatio(HLp->Hkkt), HLp->pstats->dCondNumberEst, HLp->pstats->dIterDiffMetric,
                  HLp->pstats->dIterDiffMetricThresh, HLp->pstats->dIterDiffMetricAggressive, HLp->pstats->isSuperLin);
 #else
-    hdsdp_printf("    %5d  %+15.8e  %+15.8e  %8.2e  %8.2e  %5.2f %5.2f  %4.1f \n",
-                 iIter, HLp->pObjVal, HLp->dObjVal, HLp->dPrimalInfeasRel, HLp->dDualInfeasRel,
-           HLp->pStep, HLp->dStep, HUtilGetTimeStamp() - HLp->dTStart);
+    hdsdp_printf("    %5d  %+15.8e  %+15.8e  %8.2e  %8.2e  %8.2e  %5.2f %5.2f  %4.1f \n",
+                 iIter, HLp->pObjVal, HLp->dObjVal, HLp->dPrimalInfeasRel, HLp->dDualInfeasRel, HLp->dBarrierMu,
+                 HLp->pStep, HLp->dStep, HUtilGetTimeStamp() - HLp->dTStart);
 #endif
     
     return goOn;
