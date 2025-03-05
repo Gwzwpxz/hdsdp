@@ -18,6 +18,18 @@ where we do linear optimization subject to affine constraints over the cone of p
 
 HDSDP is licensed under the MIT License. Check license.md for more details
 
+#### Cite
+
+```
+@article{gao2025algorithm,
+  title={Algorithm xxxx: HDSDP: Software for Semidefinite Programming},
+  author={Gao, Wenzhi and Ge, Dongdong and Ye, Yinyu},
+  journal={ACM Transactions on Mathematical Software},
+  year={2025},
+  publisher={ACM New York, NY}
+}
+```
+
 #### References
 
 [1] DSDP5.8 https://www.mcs.anl.gov/hs/software/DSDP/.
